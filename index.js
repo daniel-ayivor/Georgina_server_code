@@ -11,6 +11,8 @@ const authRoute = require("./Routes/authRoutes");
 const userRoute = require("./Routes/userRoutes");
 const productRoute = require("./Routes/productRoutes");
 const orderRoute = require("./Routes/orderRoutes");
+const bookingRoute = require("./Routes/cleaningBookingRoutes");
+
 const paymentRoute = require("./Routes/paymentRoutes");
 
 config();
@@ -23,6 +25,7 @@ app.use("/uploads",express.static(path.join(__dirname,'uploads')));
 // Mount the user routes with a base path
 app.use( authRoute);
 app.use(userRoute);
+app.use(bookingRoute);
 app.use(orderRoute);
 app.use(paymentRoute);
 app.use(productRoute);

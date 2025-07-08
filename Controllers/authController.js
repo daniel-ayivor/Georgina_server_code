@@ -4,6 +4,7 @@ const userSchema = require("../Schemas/userSchema");
 const bcrypt = require('bcryptjs');
 const Ajv = require("ajv");
 const nodemailer = require("nodemailer");
+const Product = require("../Models/productModel");
 
 const ajv = new Ajv();
 const validate = ajv.compile(userSchema);

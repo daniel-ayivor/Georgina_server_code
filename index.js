@@ -17,6 +17,7 @@ const subCategoryRoute = require("./Routes/subCategoryRoutes");
 const orderItemRoute = require("./Routes/orderItemRoutes");
 const customerRoute = require("./Routes/customerRoutes");
 const notificationRoute = require("./Routes/notificationRoutes");
+const { QueryTypes } = require('sequelize');
 
 const paymentRoute = require("./Routes/paymentRoutes");
 
@@ -45,6 +46,41 @@ app.use("/api/notifications", notificationRoute);
     try {
         await sequelize.authenticate();
         console.log('Database connected...');
+
+        // --- FIX for slug migration ---
+        // 1. Add slug column if it doesn't exist (ignore error if exists)
+        try {
+            await sequelize.query("ALTER TABLE products ADD COLUMN slug VARCHAR(255)");
+        } catch (e) {
+            // Ignore error if column already exists
+        }
+        // 2. Fill in unique slugs for products with NULL or empty slug
+        const products = await sequelize.query("SELECT id, slug FROM products", { type: QueryTypes.SELECT });
+        const usedSlugs = new Set();
+        for (const p of products) {
+            if (p.slug) usedSlugs.add(p.slug);
+        }
+        for (const p of products) {
+            if (!p.slug || p.slug === '' || usedSlugs.has(p.slug)) {
+                let newSlug = `product-${p.id}`;
+                let counter = 1;
+                while (usedSlugs.has(newSlug)) {
+                    newSlug = `product-${p.id}-${counter++}`;
+                }
+                await sequelize.query("UPDATE products SET slug = :slug WHERE id = :id", {
+                    replacements: { slug: newSlug, id: p.id },
+                });
+                usedSlugs.add(newSlug);
+            }
+        }
+        // 3. Make slug NOT NULL and UNIQUE
+        try {
+            await sequelize.query("ALTER TABLE products MODIFY slug VARCHAR(255) NOT NULL");
+        } catch (e) {}
+        try {
+            await sequelize.query("ALTER TABLE products ADD UNIQUE (slug)");
+        } catch (e) {}
+        // --- END FIX ---
 
         // Sync models explicitly
         await Product.sync({ alter: true });

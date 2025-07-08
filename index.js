@@ -24,7 +24,14 @@ const paymentRoute = require("./Routes/paymentRoutes");
 config();
 const app = express();
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors({
+  origin: [
+    "https://georgina-server-code.onrender.com",
+    "https://snappy-cart-carousel.vercel.app",
+    "https://luckyexpress-dashboard.vercel.app"
+  ],
+  credentials: true // if you need to allow cookies/auth headers
+}));
 app.use(express.json());
 app.use("/uploads",express.static(path.join(__dirname,'uploads')));
 

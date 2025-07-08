@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../Models/userModel");
 const userSchema = require("../Schemas/userSchema");
-const bcrypt = require("bcrypt");
+const bcrypt = require('bcryptjs');
 const Ajv = require("ajv");
 const nodemailer = require("nodemailer");
 

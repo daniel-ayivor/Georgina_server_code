@@ -1,62 +1,9 @@
-// const { DataTypes, ENUM } = require('sequelize');
-// const sequelize = require('../Database/database');
-
-// const Product = sequelize.define('Product', {
-//     id: {
-//         type: DataTypes.INTEGER,
-//         autoIncrement: true,
-//         primaryKey: true
-//     },
-
-//     image: {
-//         type: DataTypes.STRING, // Expecting a string for the file path
-//         allowNull: false,
-//         // Remove isUrl validation since it's a local path
-//         validate: {
-//             notEmpty: true, // Ensure the field is not empty
-//         },
-//     },
-//     title: {
-//         type: DataTypes.STRING,
-//         allowNull: false
-//     },
-//     price: {
-//         type: DataTypes.FLOAT, 
-//         allowNull: false,
-//         validate: {
-//             isFloat: true,
-//             min: 0  
-//         }
-//     },
-//     text: {
-//         type: DataTypes.TEXT, 
-//         allowNull: true
-//     },
-//     rating: {
-//         type: DataTypes.ENUM('1', '2', '3', '4', '5'), 
-//         allowNull: false,
-//     },
-//     category: {
-//         type: DataTypes.ENUM('male', 'female', 'kids', 'adults'), 
-//         allowNull: false,
-//     },
-//     size: {
-//         type: DataTypes.ENUM('XL', 'L', 'XXL', 'MEDIUM', 'SM'), 
-//         allowNull: false,
-//     }
-
-// }, {
-//     tableName: 'products',
-//     timestamps: true 
-// });
-
-// module.exports = Product;
 const { DataTypes } = require('sequelize');
 const sequelize = require('../Database/database');
 
 const Product = sequelize.define('Product', {
   id: {
-    type: DataTypes.STRING, // Use STRING to match TypeScript interface
+    type: DataTypes.STRING,
     primaryKey: true,
   },
   name: {
@@ -83,14 +30,11 @@ const Product = sequelize.define('Product', {
       min: 0,
     },
   },
-  image: {
-        type: DataTypes.STRING, // Expecting a string for the file path
-        allowNull: false,
-        // Remove isUrl validation since it's a local path
-        validate: {
-            notEmpty: true, // Ensure the field is not empty
-        },
-    },
+  images: {
+    type: DataTypes.JSON, // Store array of image URLs/paths
+    allowNull: false,
+    defaultValue: [],
+  },
   categoryId: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -115,17 +59,33 @@ const Product = sequelize.define('Product', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  slug: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+  },
   featured: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
-  size: {
-    type: DataTypes.ENUM('XL', 'L', 'XXL', 'MEDIUM', 'SM'),
+  sizes: {
+    type: DataTypes.JSON, // Store array of sizes
     allowNull: true,
+    defaultValue: [],
+  },
+  colors: {
+    type: DataTypes.JSON, // Store array of colors
+    allowNull: true,
+    defaultValue: [],
   },
 }, {
   tableName: 'products',
   timestamps: true,
 });
+
+Product.associate = (models) => {
+  Product.belongsTo(models.Category, { foreignKey: 'categoryId', as: 'category' });
+  Product.belongsTo(models.SubCategory, { foreignKey: 'subcategoryId', as: 'subcategory' });
+};
 
 module.exports = Product;

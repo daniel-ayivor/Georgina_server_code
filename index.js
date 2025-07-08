@@ -12,6 +12,11 @@ const userRoute = require("./Routes/userRoutes");
 const productRoute = require("./Routes/productRoutes");
 const orderRoute = require("./Routes/orderRoutes");
 const bookingRoute = require("./Routes/cleaningBookingRoutes");
+const categoryRoute = require("./Routes/categoryRoutes");
+const subCategoryRoute = require("./Routes/subCategoryRoutes");
+const orderItemRoute = require("./Routes/orderItemRoutes");
+const customerRoute = require("./Routes/customerRoutes");
+const notificationRoute = require("./Routes/notificationRoutes");
 
 const paymentRoute = require("./Routes/paymentRoutes");
 
@@ -29,6 +34,11 @@ app.use(bookingRoute);
 app.use(orderRoute);
 app.use(paymentRoute);
 app.use(productRoute);
+app.use("/api/categories", categoryRoute);
+app.use("/api/subcategories", subCategoryRoute);
+app.use("/api/order-items", orderItemRoute);
+app.use("/api/customers", customerRoute);
+app.use("/api/notifications", notificationRoute);
 
 
 (async () => {

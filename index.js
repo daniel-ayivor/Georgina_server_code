@@ -25,8 +25,22 @@ config();
 const app = express();
 app.use(bodyParser.json());
 app.use(cors({
-  origin: ['http://localhost:8080', 'http://localhost:8082', 'https://georgina-server-code.onrender.com'], // Allow specific origins
-  credentials: true // if you need to allow cookies/auth headers
+  origin: [
+    'https://georgina-services-limited-dashboard.vercel.app',
+    'https://snappy-cart-carousel.vercel.app',
+    'https://luckyexpress-dashboard.vercel.app',
+    'https://georgina-server-code.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5173',
+    'http://localhost:8080',
+    'http://localhost:8082',
+    'http://localhost:8000',
+    'http://localhost:8003'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(express.json());
 app.use("/uploads",express.static(path.join(__dirname,'uploads')));
@@ -49,15 +63,6 @@ app.use("/api/notifications", notificationRoute);
     try {
         await sequelize.authenticate();
         console.log('Database connected...');
-
-        // --- REMOVE slug migration code for fresh DBs ---
-        // Sync models explicitly
-        // await Product.sync({ alter: true });
-        // console.log('Product model synced!');
-        // await User.sync({ alter: true });
-        // console.log("User model synced!", User);
-        // await Order.sync({ alter: true });
-        // console.log("Order model synced!");
 
     } catch (error) {
         console.error('Error syncing database:', error);

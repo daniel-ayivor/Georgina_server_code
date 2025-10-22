@@ -25,11 +25,7 @@ config();
 const app = express();
 app.use(bodyParser.json());
 app.use(cors({
-  origin: [
-    "https://georgina-server-code.onrender.com",
-    "https://snappy-cart-carousel.vercel.app",
-    "https://luckyexpress-dashboard.vercel.app"
-  ],
+  origin: ['http://localhost:8080', 'http://localhost:8082', 'https://georgina-server-code.onrender.com'], // Allow specific origins
   credentials: true // if you need to allow cookies/auth headers
 }));
 app.use(express.json());
@@ -56,12 +52,12 @@ app.use("/api/notifications", notificationRoute);
 
         // --- REMOVE slug migration code for fresh DBs ---
         // Sync models explicitly
-        await Product.sync({ alter: true });
-        console.log('Product model synced!');
-        await User.sync({ alter: true });
-        console.log("User model synced!", User);
-        await Order.sync({ alter: true });
-        console.log("Order model synced!");
+        // await Product.sync({ alter: true });
+        // console.log('Product model synced!');
+        // await User.sync({ alter: true });
+        // console.log("User model synced!", User);
+        // await Order.sync({ alter: true });
+        // console.log("Order model synced!");
 
     } catch (error) {
         console.error('Error syncing database:', error);

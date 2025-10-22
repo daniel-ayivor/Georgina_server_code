@@ -26,10 +26,17 @@ const Category = sequelize.define('Category', {
 }, {
   tableName: 'categories',
   timestamps: true,
+  underscored: true,
 });
 
-Category.associate = (models) => {
-  Category.hasMany(models.SubCategory, { foreignKey: 'parentId', as: 'subcategories' });
+// Define associations after all models are loaded
+const defineAssociations = () => {
+  const SubCategory = require('./subCategoryModel');
+  Category.hasMany(SubCategory, { foreignKey: 'parentId', as: 'subcategories' });
+  SubCategory.belongsTo(Category, { foreignKey: 'parentId', as: 'category' });
 };
+
+// Call defineAssociations when the model is required
+defineAssociations();
 
 module.exports = Category; 

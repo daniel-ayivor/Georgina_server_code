@@ -7,9 +7,65 @@ const Product = require('../Models/productModel');
 const User = require('../Models/userModel');
 const nodemailer = require('nodemailer');
 
+// const PaymentIntent = async (req, res) => {
+//     const { productId, userId, quantity, paymentMethod } = req.body;
+
+//     try {
+//         const product = await Product.findByPk(productId);
+//         const user = await User.findByPk(userId);
+
+//         if (!product || !user) {
+//             return res.status(404).json({ message: 'Product or User not found' });
+//         }
+
+//         const totalAmount = product.price * quantity;
+
+//         if (paymentMethod === 'stripe') {
+//             // Stripe Checkout Session
+//             const session = await stripe.checkout.sessions.create({
+//                 payment_method_types: ['card'],
+//                 line_items: [
+//                     {
+//                         price_data: {
+//                             currency: 'usd',
+//                             product_data: {
+//                                 name: product.name,
+//                             },
+//                             unit_amount: totalAmount * 100,
+//                         },
+//                         quantity,
+//                     },
+//                 ],
+//                 mode: 'payment',
+//                 success_url: `${process.env.SUCCESS_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+//                 cancel_url: `${process.env.CANCEL_URL}/payment-failed`,
+//                 metadata: { productId, userId },
+//                 customer_email: user.email, 
+//             });
+
+//             const order = await Order.create({
+//                 UserId: user.id,
+//                 ProductId: product.id,
+//                 totalAmount,
+//                 paymentIntentId: session.id,
+//                 status: 'pending'
+//             });
+
+//             return res.json({ url: session.url, orderId: order.id });
+//         } 
+
+//         // MoMo payment remains unchanged
+//         // MoMo does not have built-in redirect URLs, so you'd handle success/failure manually
+
+//     } catch (error) {
+//         console.error('Error creating payment intent:', error);
+//         res.status(500).json({ message: 'Internal server error' });
+//     }
+// };
+
 
 const PaymentIntent = async (req, res) => {
-    const { productId, userId, quantity, paymentMethod } = req.body;
+    const { productId, userId, quantity, paymentMethod, countryCode } = req.body;
 
     try {
         const product = await Product.findByPk(productId);
@@ -21,18 +77,21 @@ const PaymentIntent = async (req, res) => {
 
         const totalAmount = product.price * quantity;
 
-        if (paymentMethod === 'stripe') {
-            // Stripe Checkout Session
+        if (paymentMethod === 'stripe_card') {
+            // Determine currency based on the user's country
+            const currency = countryCode === 'GH' ? 'ghs' : 'usd';
+            
+            // Stripe Checkout Session for card payments
             const session = await stripe.checkout.sessions.create({
                 payment_method_types: ['card'],
                 line_items: [
                     {
                         price_data: {
-                            currency: 'usd',
+                            currency: currency, 
                             product_data: {
                                 name: product.name,
                             },
-                            unit_amount: totalAmount * 100,
+                            unit_amount: totalAmount * 100, // Amount in cents
                         },
                         quantity,
                     },
@@ -53,10 +112,41 @@ const PaymentIntent = async (req, res) => {
             });
 
             return res.json({ url: session.url, orderId: order.id });
-        } 
+        } else if (paymentMethod === 'momo_external' && countryCode === 'GH') {
+            // Your existing MoMo payment logic, restricted to Ghana
+            const momoResponse = await axios.post(
+                `${process.env.MOMO_API_URL}/collection/v1_0/requesttopay`,
+                {
+                    amount: totalAmount.toString(),
+                    currency: 'GHS',
+                    externalId: `order_${Date.now()}`,
+                    payer: {
+                        partyIdType: 'MSISDN',
+                        partyId: req.body.momoNumber, 
+                    },
+                    payerMessage: `Payment for Order ${Date.now()}`,
+                    payeeNote: `Payment for Order ${Date.now()}`
+                },
+                {
+                    headers: {
+                        'Ocp-Apim-Subscription-Key': process.env.MOMO_SUBSCRIPTION_KEY,
+                        Authorization: `Bearer ${process.env.MOMO_ACCESS_TOKEN}`,
+                    },
+                }
+            );
 
-        // MoMo payment remains unchanged
-        // MoMo does not have built-in redirect URLs, so you'd handle success/failure manually
+            const order = await Order.create({
+                UserId: user.id,
+                ProductId: product.id,
+                totalAmount,
+                paymentIntentId: momoResponse.data.transactionId, 
+                status: 'pending'
+            });
+
+            return res.json({ message: 'MoMo request sent', transactionId: momoResponse.data.transactionId });
+        } else {
+            return res.status(400).json({ message: 'Invalid payment method or country' });
+        }
 
     } catch (error) {
         console.error('Error creating payment intent:', error);

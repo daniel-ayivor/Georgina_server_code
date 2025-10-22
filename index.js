@@ -62,10 +62,15 @@ app.use("/api/notifications", notificationRoute);
 (async () => {
     try {
         await sequelize.authenticate();
-        console.log('Database connected...');
+        console.log('✅ Database connected successfully!');
+
+        // Sync database schema
+        await sequelize.sync({ force: false, alter: true });
+        console.log('✅ Database schema synced!');
 
     } catch (error) {
-        console.error('Error syncing database:', error);
+        console.error('❌ Database connection error:', error.message);
+        console.log('⚠️  Server will continue running but database operations may fail');
     }
 })();
 

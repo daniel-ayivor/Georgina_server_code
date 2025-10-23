@@ -1,5 +1,6 @@
-// controllers/bookingController.js
-const { Booking } = require('../Models/Booking'); // Adjust path as needed
+const Booking =require("./../Models/bookingModel")
+
+
 
 // Create Single Booking
 const createBooking = async (req, res) => {

@@ -22,9 +22,10 @@ const SubCategory = sequelize.define('SubCategory', {
 }, {
   tableName: 'subcategories',
   timestamps: true,
-  underscored: true,
 });
 
-// Associations are defined in categoryModel.js to avoid circular dependencies
+SubCategory.associate = (models) => {
+  SubCategory.belongsTo(models.Category, { foreignKey: 'parentId', as: 'category' });
+};
 
 module.exports = SubCategory; 

@@ -18,18 +18,6 @@ exports.getSubCategories = async (req, res) => {
   }
 };
 
-exports.getSubCategoriesByParent = async (req, res) => {
-  try {
-    const { parentId } = req.params;
-    const subcategories = await SubCategory.findAll({
-      where: { parentId }
-    });
-    res.status(200).json(subcategories);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
 exports.getSubCategoryById = async (req, res) => {
   try {
     const subcategory = await SubCategory.findByPk(req.params.id);

@@ -9,10 +9,7 @@ const {
     getProduct,
     updateProduct,
     rateProduct,
-    deletingProduct,
-    getTrendingProducts,
-    getNewArrivalProducts,
-    getFeaturedProducts
+    deletingProduct
 } = require('../Controllers/productController');
 
 // Multer configuration
@@ -31,9 +28,6 @@ const upload = multer({ storage });
  */
 router.get('/api/products', getProducts);
 router.get('/api/products/:productId', getProduct);
-router.get('/api/products/trending', getTrendingProducts);
-router.get('/api/products/new-arrivals', getNewArrivalProducts);
-router.get('/api/products/featured', getFeaturedProducts);
 
 /**
  * 🛠️ Admin Routes — Requires Authentication and Role Check

@@ -129,90 +129,6 @@ const rateProduct = async (req, res) => {
     }
 };
 
-// Get Trending Products
-const getTrendingProducts = async (req, res) => {
-    try {
-        const { limit = 10, page = 1 } = req.query;
-        const offset = (page - 1) * limit;
-        
-        const products = await Product.findAll({
-            where: { trending: true },
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            order: [['createdAt', 'DESC']]
-        });
-        
-        const total = await Product.count({ where: { trending: true } });
-        
-        res.status(200).json({ 
-            products, 
-            total,
-            page: parseInt(page),
-            limit: parseInt(limit),
-            message: "Trending products retrieved successfully" 
-        });
-    } catch (error) {
-        console.error("Error retrieving trending products:", error);
-        res.status(500).json({ error: "Error retrieving trending products" });
-    }
-};
-
-// Get New Arrival Products
-const getNewArrivalProducts = async (req, res) => {
-    try {
-        const { limit = 10, page = 1 } = req.query;
-        const offset = (page - 1) * limit;
-        
-        const products = await Product.findAll({
-            where: { newArrival: true },
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            order: [['createdAt', 'DESC']]
-        });
-        
-        const total = await Product.count({ where: { newArrival: true } });
-        
-        res.status(200).json({ 
-            products, 
-            total,
-            page: parseInt(page),
-            limit: parseInt(limit),
-            message: "New arrival products retrieved successfully" 
-        });
-    } catch (error) {
-        console.error("Error retrieving new arrival products:", error);
-        res.status(500).json({ error: "Error retrieving new arrival products" });
-    }
-};
-
-// Get Featured Products
-const getFeaturedProducts = async (req, res) => {
-    try {
-        const { limit = 10, page = 1 } = req.query;
-        const offset = (page - 1) * limit;
-        
-        const products = await Product.findAll({
-            where: { featured: true },
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            order: [['createdAt', 'DESC']]
-        });
-        
-        const total = await Product.count({ where: { featured: true } });
-        
-        res.status(200).json({ 
-            products, 
-            total,
-            page: parseInt(page),
-            limit: parseInt(limit),
-            message: "Featured products retrieved successfully" 
-        });
-    } catch (error) {
-        console.error("Error retrieving featured products:", error);
-        res.status(500).json({ error: "Error retrieving featured products" });
-    }
-};
-
 // module.exports = upload;
 module.exports = {
     deletingProduct,
@@ -221,7 +137,6 @@ module.exports = {
     getProducts,
     rateProduct,
     updateProduct,
-    getTrendingProducts,
-    getNewArrivalProducts,
-    getFeaturedProducts,
+    
+    
 };

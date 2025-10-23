@@ -68,14 +68,6 @@ const Product = sequelize.define('Product', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
-  trending: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-  },
-  newArrival: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-  },
   sizes: {
     type: DataTypes.JSON, // Store array of sizes
     allowNull: true,

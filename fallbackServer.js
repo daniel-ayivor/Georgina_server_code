@@ -85,7 +85,42 @@ app.get('/test', (req, res) => {
   res.json({ message: 'Server is working!', timestamp: new Date().toISOString() });
 });
 
-// Auth routes
+// Auth routes - Customer
+app.post('/api/auth/customer/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = users.find(u => u.email === email);
+    
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: "24h" }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Auth routes - Admin
 app.post('/api/auth/admin/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -103,7 +138,7 @@ app.post('/api/auth/admin/login', async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, role: user.role },
       process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: "1h" }
+      { expiresIn: "24h" }
     );
 
     res.json({
@@ -120,10 +155,11 @@ app.post('/api/auth/admin/login', async (req, res) => {
   }
 });
 
+// Legacy endpoints for backward compatibility
 app.post('/api/auth/user/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = users.find(u => u.email === email && u.role === 'user');
+    const user = users.find(u => u.email === email);
     
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -137,7 +173,7 @@ app.post('/api/auth/user/login', async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, role: user.role },
       process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: "1h" }
+      { expiresIn: "24h" }
     );
 
     res.json({
@@ -210,6 +246,36 @@ app.post('/api/subcategories', authenticate, (req, res) => {
 // Products routes (mock data)
 app.get('/api/products', (req, res) => {
   res.json([]);
+});
+
+app.get('/api/products/trending', (req, res) => {
+  res.json({
+    products: [],
+    total: 0,
+    page: 1,
+    limit: 10,
+    message: "Trending products retrieved successfully"
+  });
+});
+
+app.get('/api/products/new-arrivals', (req, res) => {
+  res.json({
+    products: [],
+    total: 0,
+    page: 1,
+    limit: 10,
+    message: "New arrival products retrieved successfully"
+  });
+});
+
+app.get('/api/products/featured', (req, res) => {
+  res.json({
+    products: [],
+    total: 0,
+    page: 1,
+    limit: 10,
+    message: "Featured products retrieved successfully"
+  });
 });
 
 // Orders routes (mock data)

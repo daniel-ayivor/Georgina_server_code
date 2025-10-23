@@ -44,14 +44,13 @@ const registerUser = async (req, res) => {
   }
 };
 
-// Login User
-// Login User with Role Check
-const loginUser = async (req, res) => {
+// Login Customer
+const loginCustomer = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password } = req.body;
 
-    if (!email || !password || !role) {
-      return res.status(400).json({ message: "Email, password, and role are required" });
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
     }
 
     // Find user by email
@@ -61,9 +60,53 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Check if roles match
-    if (user.role !== role) {
-      return res.status(403).json({ message: `Access denied for role: ${role}` });
+    // Compare password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user.id, role: user.role || 'user' },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    res.status(200).json({
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role || 'user',
+      },
+    });
+  } catch (error) {
+    console.error("Error logging in customer", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Login Admin
+const loginAdmin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: "Access denied. Admin privileges required." });
     }
 
     // Compare password
@@ -72,11 +115,11 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Generate JWT token with role
+    // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "24h" }
     );
 
     res.status(200).json({
@@ -89,7 +132,7 @@ const loginUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error logging in user", error);
+    console.error("Error logging in admin", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -184,9 +227,9 @@ const userInfo = async (req, res) => {
 
 module.exports = {
   registerUser,
-  loginUser,
+  loginCustomer,
+  loginAdmin,
   userInfo,
   forgotPassword,
   resetPassword,
-  
 };

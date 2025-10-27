@@ -1,62 +1,15 @@
+// models/Product.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../Database/database');
 
 const Product = sequelize.define('Product', {
   id: {
-    type: DataTypes.STRING,
+    type: DataTypes.UUID, // Changed from STRING to UUID
+    defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
   },
   name: {
     type: DataTypes.STRING,
-    allowNull: false,
-  },
-  description: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-  },
-  price: {
-    type: DataTypes.FLOAT,
-    allowNull: false,
-    validate: {
-      isFloat: true,
-      min: 0,
-    },
-  },
-  discountPrice: {
-    type: DataTypes.FLOAT,
-    allowNull: true,
-    validate: {
-      isFloat: true,
-      min: 0,
-    },
-  },
-  images: {
-    type: DataTypes.JSON, // Store array of image URLs/paths
-    allowNull: false,
-    defaultValue: [],
-  },
-  categoryId: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  subcategoryId: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  rating: {
-    type: DataTypes.FLOAT,
-    allowNull: false,
-    validate: {
-      min: 0,
-      max: 5,
-    },
-  },
-  likes: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0,
-  },
-  stock: {
-    type: DataTypes.INTEGER,
     allowNull: false,
   },
   slug: {
@@ -64,28 +17,68 @@ const Product = sequelize.define('Product', {
     allowNull: false,
     unique: true,
   },
-  featured: {
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  price: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+  },
+  categoryLevel1: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      isIn: [['Clothes', 'Foodstuffs', 'Services']]
+    },
+  },
+  categoryLevel2: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  categoryLevel3: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  serviceType: {
+    type: DataTypes.ENUM('physical', 'service'),
+    defaultValue: 'physical',
+  },
+  serviceDuration: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  unit: {
+    type: DataTypes.STRING,
+    defaultValue: 'piece',
+  },
+  stock: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    validate: {
+      min: 0
+    }
+  },
+  images: {
+    type: DataTypes.JSON, // This stores array of image paths
+    allowNull: true,
+    defaultValue: [],
+  },
+  isActive: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
+    defaultValue: true,
   },
-  sizes: {
-    type: DataTypes.JSON, // Store array of sizes
+  tags: {
+    type: DataTypes.JSON,
     allowNull: true,
-    defaultValue: [],
   },
-  colors: {
-    type: DataTypes.JSON, // Store array of colors
+  brand: {
+    type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: [],
   },
 }, {
   tableName: 'products',
   timestamps: true,
 });
-
-Product.associate = (models) => {
-  Product.belongsTo(models.Category, { foreignKey: 'categoryId', as: 'category' });
-  Product.belongsTo(models.SubCategory, { foreignKey: 'subcategoryId', as: 'subcategory' });
-};
 
 module.exports = Product;

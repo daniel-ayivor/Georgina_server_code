@@ -1,4 +1,3 @@
-// models/Booking.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../Database/database');
 
@@ -21,16 +20,8 @@ const Booking = sequelize.define('Booking', {
     allowNull: false,
   },
   serviceType: {
-    type: DataTypes.ENUM('basic', 'deep', 'office', 'post-construction'),
+    type: DataTypes.STRING,
     allowNull: false,
-  },
-  serviceId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: {
-      model: 'CleaningServices',
-      key: 'id'
-    }
   },
   address: {
     type: DataTypes.STRING,
@@ -60,10 +51,14 @@ const Booking = sequelize.define('Booking', {
   notes: {
     type: DataTypes.TEXT,
     allowNull: true,
+  },
+  specialInstructions: {
+    type: DataTypes.TEXT,
+    allowNull: true,
   }
 }, {
   tableName: 'bookings',
-  timestamps: true, // This will automatically create createdAt and updatedAt
+  timestamps: true,
 });
 
 module.exports = Booking;

@@ -10,7 +10,7 @@ const User = require("./Models/userModel");
 
 const Order = require("./Models/orderModel");
 const Category = require("./Models/categoryModel");
-
+const contactRoute = require("./Routes/contactRoute");
 const authRoute = require("./Routes/authRoutes");
 const userRoute = require("./Routes/userRoutes");
 const productRoute = require("./Routes/productRoutes");
@@ -333,6 +333,7 @@ async function seedInitialData() {
 app.use(authRoute);
 app.use(userRoute);
 app.use(bookingRoute);
+app.use(contactRoute);
 app.use(orderRoute);
 app.use(paymentRoute);
 app.use(serviceRoute);

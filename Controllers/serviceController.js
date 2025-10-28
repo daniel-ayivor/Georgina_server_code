@@ -50,7 +50,7 @@ const createService = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ Error creating service:', err);
+    console.error(' Error creating service:', err);
     
     if (err.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ 

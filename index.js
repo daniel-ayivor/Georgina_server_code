@@ -764,7 +764,7 @@ app.use(authRoute);
 app.use(userRoute);
 app.use(bookingRoute);
 app.use(contactRoute);
-// app.use(chatbotRoutes);
+app.use(chatbotRoutes);
 app.use(paymentRoute);
 app.use(serviceRoute);
 app.use(productRoute);

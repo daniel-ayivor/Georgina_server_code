@@ -13,11 +13,11 @@ const Product = sequelize.define('Product', {
     allowNull: false,
   },
   images: {
-    type: DataTypes.JSON, // This stores array of image paths
+    type: DataTypes.JSON, // This stores array of image paths   // Store array of Cloudinary URLs
     allowNull: true,
     defaultValue: [],
   },
-  
+
   slug: {
     type: DataTypes.STRING,
     allowNull: false,

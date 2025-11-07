@@ -1,0 +1,6 @@
+﻿.env
+.env.backup
+.env.local
+.env.production
+node_modules/
+uploads/

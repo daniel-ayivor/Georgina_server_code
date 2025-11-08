@@ -446,6 +446,9 @@ app.use(cors({
   origin: [
     'https://georgina-services-limited-dashboard.vercel.app',
     'https://snappy-cart-carousel.vercel.app',
+    'https://shop-clean-sparkle.vercel.app',
+    'https://georgina-services-limited-dashboard.vercel.app/login',
+    'https://georgina-services-limited-dashboard.vercel.app',
     'http://localhost:8080',
     'http://localhost:8082',
     'http://localhost:8083',

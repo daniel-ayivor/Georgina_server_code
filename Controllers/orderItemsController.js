@@ -2,7 +2,7 @@
 const OrderItem = require('../Models/orderItemModel');
 const Order = require('../Models/orderModel');
 const User = require('../Models/userModel');
-
+const Product = require('../Models/productModel'); // ADD THIS LINE
 
 
 

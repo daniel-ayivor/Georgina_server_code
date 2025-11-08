@@ -88,4 +88,12 @@ const Product = sequelize.define('Product', {
   
 });
 
+
+Product.associate = (models) => {
+  Product.hasMany(models.OrderItem, {
+    foreignKey: 'productId',
+    as: 'orderItems' // This is the reverse association
+  });
+};
+
 module.exports = Product;

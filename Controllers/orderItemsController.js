@@ -3,6 +3,77 @@ const OrderItem = require('../Models/orderItemModel');
 const Order = require('../Models/orderModel');
 const User = require('../Models/userModel');
 
+
+exports.getOrderItems = async (req, res) => {
+  try {
+    const orderItems = await OrderItem.findAll({
+      include: [
+        {
+          model: Order,
+          as: 'order', // Use the alias from OrderItem model
+          include: [{
+            model: User,
+            attributes: ['id', 'name', 'email']
+          }]
+        },
+        {
+          model: Product,
+          as: 'product' // Use the alias from OrderItem model
+        }
+      ]
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: orderItems
+    });
+  } catch (err) {
+    console.error('Error in getOrderItems:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+exports.getOrderItemById = async (req, res) => {
+  try {
+    const orderItem = await OrderItem.findByPk(req.params.id, {
+      include: [
+        {
+          model: Order,
+          as: 'order', // Use the alias
+          include: [{
+            model: User,
+            attributes: ['id', 'name', 'email']
+          }]
+        },
+        {
+          model: Product,
+          as: 'product' // Use the alias
+        }
+      ]
+    });
+    
+    if (!orderItem) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'OrderItem not found' 
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: orderItem
+    });
+  } catch (err) {
+    console.error('Error in getOrderItemById:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
 exports.createOrderItem = async (req, res) => {
   try {
     const orderItem = await OrderItem.create(req.body);
@@ -18,59 +89,59 @@ exports.createOrderItem = async (req, res) => {
   }
 };
 
-exports.getOrderItems = async (req, res) => {
-  try {
-    const orderItems = await OrderItem.findAll({
-      include: [
-        {
-          model: Order,
-          include: [{
-            model: User,
-            attributes: ['id', 'name', 'email']
-          }]
-        }
-      ]
-    });
-    res.status(200).json({
-      success: true,
-      data: orderItems
-    });
-  } catch (err) {
-    res.status(500).json({ 
-      success: false,
-      error: err.message 
-    });
-  }
-};
+// exports.getOrderItems = async (req, res) => {
+//   try {
+//     const orderItems = await OrderItem.findAll({
+//       include: [
+//         {
+//           model: Order,
+//           include: [{
+//             model: User,
+//             attributes: ['id', 'name', 'email']
+//           }]
+//         }
+//       ]
+//     });
+//     res.status(200).json({
+//       success: true,
+//       data: orderItems
+//     });
+//   } catch (err) {
+//     res.status(500).json({ 
+//       success: false,
+//       error: err.message 
+//     });
+//   }
+// };
 
-exports.getOrderItemById = async (req, res) => {
-  try {
-    const orderItem = await OrderItem.findByPk(req.params.id, {
-      include: [
-        {
-          model: Order,
-          include: [{
-            model: User,
-            attributes: ['id', 'name', 'email']
-          }]
-        }
-      ]
-    });
-    if (!orderItem) return res.status(404).json({ 
-      success: false,
-      error: 'OrderItem not found' 
-    });
-    res.status(200).json({
-      success: true,
-      data: orderItem
-    });
-  } catch (err) {
-    res.status(500).json({ 
-      success: false,
-      error: err.message 
-    });
-  }
-};
+// exports.getOrderItemById = async (req, res) => {
+//   try {
+//     const orderItem = await OrderItem.findByPk(req.params.id, {
+//       include: [
+//         {
+//           model: Order,
+//           include: [{
+//             model: User,
+//             attributes: ['id', 'name', 'email']
+//           }]
+//         }
+//       ]
+//     });
+//     if (!orderItem) return res.status(404).json({ 
+//       success: false,
+//       error: 'OrderItem not found' 
+//     });
+//     res.status(200).json({
+//       success: true,
+//       data: orderItem
+//     });
+//   } catch (err) {
+//     res.status(500).json({ 
+//       success: false,
+//       error: err.message 
+//     });
+//   }
+// };
 
 exports.updateOrderItem = async (req, res) => {
   try {

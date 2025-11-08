@@ -12,15 +12,16 @@ exports.getOrderItems = async (req, res) => {
       include: [
         {
           model: Order,
-          as: 'order',
+          as: 'order', // This matches OrderItem.associate alias
           include: [{
             model: User,
+            as: 'user', // This matches Order.associate alias
             attributes: ['id', 'name', 'email']
           }]
         },
         {
-          model: Product, // This was causing "Product is not defined" error
-          as: 'product'
+          model: Product,
+          as: 'product' // This matches OrderItem.associate alias
         }
       ]
     });
@@ -47,11 +48,12 @@ exports.getOrderItemById = async (req, res) => {
           as: 'order',
           include: [{
             model: User,
+            as: 'user', // Add this alias
             attributes: ['id', 'name', 'email']
           }]
         },
         {
-          model: Product, // This also needs the Product import
+          model: Product,
           as: 'product'
         }
       ]

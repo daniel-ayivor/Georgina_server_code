@@ -4,21 +4,23 @@ const Order = require('../Models/orderModel');
 const User = require('../Models/userModel');
 
 
+
+
 exports.getOrderItems = async (req, res) => {
   try {
     const orderItems = await OrderItem.findAll({
       include: [
         {
           model: Order,
-          as: 'order', // Use the alias from OrderItem model
+          as: 'order',
           include: [{
             model: User,
             attributes: ['id', 'name', 'email']
           }]
         },
         {
-          model: Product,
-          as: 'product' // Use the alias from OrderItem model
+          model: Product, // This was causing "Product is not defined" error
+          as: 'product'
         }
       ]
     });
@@ -42,15 +44,15 @@ exports.getOrderItemById = async (req, res) => {
       include: [
         {
           model: Order,
-          as: 'order', // Use the alias
+          as: 'order',
           include: [{
             model: User,
             attributes: ['id', 'name', 'email']
           }]
         },
         {
-          model: Product,
-          as: 'product' // Use the alias
+          model: Product, // This also needs the Product import
+          as: 'product'
         }
       ]
     });
@@ -74,6 +76,7 @@ exports.getOrderItemById = async (req, res) => {
     });
   }
 };
+
 exports.createOrderItem = async (req, res) => {
   try {
     const orderItem = await OrderItem.create(req.body);

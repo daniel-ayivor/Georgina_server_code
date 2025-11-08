@@ -87,7 +87,7 @@ const Product = sequelize.define('Product', {
   timestamps: true,
   
 });
-
+//  ?orderItems association
 
 Product.associate = (models) => {
   Product.hasMany(models.OrderItem, {

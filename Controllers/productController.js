@@ -282,15 +282,27 @@ const getProduct = async (req, res) => {
         const { productId } = req.params;
         
         let product;
-        // Check if it's a UUID (ID) or slug
-        if (productId.includes('-')) { // UUID typically contains hyphens
+        
+        // Better approach: Try by ID first, then by slug
+        // Check if productId looks like a numeric ID
+        if (!isNaN(productId)) {
+            // It's a numeric ID like "1", "2", etc.
             product = await Product.findByPk(productId);
         } else {
+            // It's probably a slug
             product = await Product.findOne({ where: { slug: productId } });
         }
         
+        // If still not found, try as UUID (if your IDs can be UUIDs)
         if (!product) {
-            return res.status(404).json({ message: "Product not found" });
+            product = await Product.findByPk(productId);
+        }
+        
+        if (!product) {
+            return res.status(404).json({ 
+                message: "Product not found",
+                productId: productId 
+            });
         }
         
         res.status(200).json({ 
@@ -305,7 +317,6 @@ const getProduct = async (req, res) => {
         });
     }
 };
-
 
 
 // Delete Product

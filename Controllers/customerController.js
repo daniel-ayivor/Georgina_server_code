@@ -1,7 +1,7 @@
 const Customer = require('../Models/customerModel');
 const User = require('../Models/userModel');
 const Order = require('../Models/orderModel');
-const Booking = require('../Models/bookingModel');
+const Booking = require('../Models/booking');
 
 // Helper to compute orders and total spent
 async function computeCustomerStats(userId) {
@@ -18,7 +18,7 @@ async function computeCustomerStats(userId) {
   };
 }
 
-
+// ✅ CREATE customer
 const createCustomer = async (req, res) => {
   try {
     const { userId, name, email, phone } = req.body;
@@ -48,83 +48,62 @@ const createCustomer = async (req, res) => {
   }
 };
 
-// ✅ Controller functions
-// const createCustomer = async (req, res) => {
-//   try {
-//     const { userId, name, email, phone } = req.body;
-
-//     if (!userId || !name || !email) {
-//       return res.status(400).json({ error: 'userId, name, and email are required' });
-//     }
-
-//     const stats = await computeCustomerStats(userId);
-//     if (!stats.isCustomer) {
-//       return res.status(400).json({ error: 'User has no orders or bookings yet' });
-//     }
-
-//     const customer = await Customer.create({
-//       userId,
-//       name,
-//       email,
-//       phone,
-//       orders: stats.orders,
-//       totalSpent: stats.totalSpent
-//     });
-
-//     res.status(201).json(customer);
-//   } catch (err) {
-//     res.status(400).json({ error: err.message });
-//   }
-// };
-
-// const getCustomers = async (req, res) => {
-//   try {
-//     const customers = await Customer.findAll();
-//     const filtered = [];
-
-//     for (const customer of customers) {
-//       const stats = await computeCustomerStats(customer.userId);
-//       if (stats.isCustomer) {
-//         filtered.push({ ...customer.toJSON(), ...stats });
-//       }
-//     }
-
-//     res.status(200).json(filtered);
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// };
+// ✅ GET all customers (with User, Orders & Bookings)
 const getCustomers = async (req, res) => {
   try {
-    const customers = await Customer.findAll();
+    const customers = await Customer.findAll({
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email', 'contact', 'role'],
+          include: [
+            { model: Order, as: 'orders', attributes: ['id', 'totalAmount', 'status', 'createdAt'] },
+            { model: Booking, as: 'bookings', attributes: ['id', 'price', 'status', 'createdAt'] }
+          ]
+        }
+      ]
+    });
 
-    const customersWithStats = await Promise.all(
-      customers.map(async (customer) => {
-        const stats = await computeCustomerStats(customer.userId);
-        if (!stats.isCustomer) return null; // skip users with no orders/bookings
-        return { ...customer.toJSON(), ...stats };
-      })
-    );
+    // Optionally compute totals
+    const enriched = await Promise.all(customers.map(async (c) => {
+      const stats = await computeCustomerStats(c.userId);
+      return { ...c.toJSON(), ...stats };
+    }));
 
-    // Remove nulls
-    const filtered = customersWithStats.filter(c => c !== null);
-
-    res.status(200).json(filtered);
+    res.status(200).json(enriched);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
+// ✅ GET single customer by ID
 const getCustomerById = async (req, res) => {
   try {
-    const customer = await Customer.findByPk(req.params.id);
+    const customer = await Customer.findByPk(req.params.id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email', 'contact'],
+          include: [
+            { model: Order, as: 'orders' },
+            { model: Booking, as: 'bookings' }
+          ]
+        }
+      ]
+    });
+
     if (!customer) return res.status(404).json({ error: 'Customer not found' });
-    res.status(200).json(customer);
+
+    const stats = await computeCustomerStats(customer.userId);
+    res.status(200).json({ ...customer.toJSON(), ...stats });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
+// ✅ UPDATE
 const updateCustomer = async (req, res) => {
   try {
     const customer = await Customer.findByPk(req.params.id);
@@ -136,6 +115,7 @@ const updateCustomer = async (req, res) => {
   }
 };
 
+// ✅ DELETE
 const deleteCustomer = async (req, res) => {
   try {
     const customer = await Customer.findByPk(req.params.id);
@@ -147,11 +127,10 @@ const deleteCustomer = async (req, res) => {
   }
 };
 
-// ✅ Export all controllers
 module.exports = {
   createCustomer,
   getCustomers,
   getCustomerById,
   updateCustomer,
-  deleteCustomer
+  deleteCustomer,
 };

@@ -18,11 +18,10 @@ async function computeCustomerStats(userId) {
   };
 }
 
-// ✅ Controller functions
+
 const createCustomer = async (req, res) => {
   try {
     const { userId, name, email, phone } = req.body;
-
     if (!userId || !name || !email) {
       return res.status(400).json({ error: 'userId, name, and email are required' });
     }
@@ -32,20 +31,51 @@ const createCustomer = async (req, res) => {
       return res.status(400).json({ error: 'User has no orders or bookings yet' });
     }
 
-    const customer = await Customer.create({
-      userId,
-      name,
-      email,
-      phone,
-      orders: stats.orders,
-      totalSpent: stats.totalSpent
+    const [customer, created] = await Customer.findOrCreate({
+      where: { userId },
+      defaults: {
+        name,
+        email,
+        phone,
+        orders: stats.orders,
+        totalSpent: stats.totalSpent,
+      },
     });
 
-    res.status(201).json(customer);
+    res.status(created ? 201 : 200).json({ ...customer.toJSON(), ...stats });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
+
+// ✅ Controller functions
+// const createCustomer = async (req, res) => {
+//   try {
+//     const { userId, name, email, phone } = req.body;
+
+//     if (!userId || !name || !email) {
+//       return res.status(400).json({ error: 'userId, name, and email are required' });
+//     }
+
+//     const stats = await computeCustomerStats(userId);
+//     if (!stats.isCustomer) {
+//       return res.status(400).json({ error: 'User has no orders or bookings yet' });
+//     }
+
+//     const customer = await Customer.create({
+//       userId,
+//       name,
+//       email,
+//       phone,
+//       orders: stats.orders,
+//       totalSpent: stats.totalSpent
+//     });
+
+//     res.status(201).json(customer);
+//   } catch (err) {
+//     res.status(400).json({ error: err.message });
+//   }
+// };
 
 // const getCustomers = async (req, res) => {
 //   try {

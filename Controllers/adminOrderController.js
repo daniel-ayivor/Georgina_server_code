@@ -3,12 +3,15 @@ const OrderItem = require('../Models/orderItemModel');
 const User = require('../Models/userModel');
 
 // Get all orders (admin only)
+
+// Get all orders (admin only)
 exports.getAllOrders = async (req, res) => {
   try {
     const orders = await Order.findAll({
       include: [
         {
           model: User,
+          as: 'user', // Add this alias - must match your Order model association
           attributes: ['id', 'name', 'email']
         },
         {
@@ -40,6 +43,7 @@ exports.getOrderById = async (req, res) => {
       include: [
         {
           model: User,
+          as: 'user', // Add this alias
           attributes: ['id', 'name', 'email']
         },
         {

@@ -47,17 +47,37 @@ const createCustomer = async (req, res) => {
   }
 };
 
+// const getCustomers = async (req, res) => {
+//   try {
+//     const customers = await Customer.findAll();
+//     const filtered = [];
+
+//     for (const customer of customers) {
+//       const stats = await computeCustomerStats(customer.userId);
+//       if (stats.isCustomer) {
+//         filtered.push({ ...customer.toJSON(), ...stats });
+//       }
+//     }
+
+//     res.status(200).json(filtered);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
 const getCustomers = async (req, res) => {
   try {
     const customers = await Customer.findAll();
-    const filtered = [];
 
-    for (const customer of customers) {
-      const stats = await computeCustomerStats(customer.userId);
-      if (stats.isCustomer) {
-        filtered.push({ ...customer.toJSON(), ...stats });
-      }
-    }
+    const customersWithStats = await Promise.all(
+      customers.map(async (customer) => {
+        const stats = await computeCustomerStats(customer.userId);
+        if (!stats.isCustomer) return null; // skip users with no orders/bookings
+        return { ...customer.toJSON(), ...stats };
+      })
+    );
+
+    // Remove nulls
+    const filtered = customersWithStats.filter(c => c !== null);
 
     res.status(200).json(filtered);
   } catch (err) {

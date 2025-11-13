@@ -25,7 +25,7 @@ router.post("/api/auth/admin/register", registerAdmin);
 router.post("/api/auth/admin/login", loginAdmin);
 
 
-
+// customer deletion route
 
 // Shared routes
 router.post("/api/auth/verify-token", verifyToken);

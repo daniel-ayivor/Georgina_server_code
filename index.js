@@ -57,6 +57,7 @@ async function syncDatabase() {
     
     // Use { alter: true } for safe schema updates in production
     await sequelize.sync({ alter: true });
+     
     
     console.log('Database synchronized successfully');
     

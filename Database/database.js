@@ -1,31 +1,3 @@
-
-
-// const { Sequelize } = require("sequelize");
-// require("dotenv").config();
-
-// // For local development - remove SSL options
-// const sequelize = new Sequelize(process.env.DATABASE_URL, {
-//   dialect: "postgres",
-//   logging: false,
-//   // Remove dialectOptions for local development
-// });
-
-// console.log("🌐 Connecting to LOCAL PostgreSQL Database...", process.env.DATABASE_URL);
-
-// sequelize
-//   .authenticate()
-//   .then(() => {
-//     console.log("✅ Connected to LOCAL PostgreSQL successfully!");
-//     console.log(`📊 Database: ${process.env.DB_NAME}`);
-//   })
-//   .catch((err) => {
-//     console.error("❌ Local database connection error:");
-//     console.error("Error details:", err);
-//   });
-
-// module.exports = sequelize;
-
-
 const { Sequelize } = require("sequelize");
 require("dotenv").config();
 

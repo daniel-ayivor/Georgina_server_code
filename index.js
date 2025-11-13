@@ -70,6 +70,7 @@ async function syncDatabase() {
 }
 
 // Enhanced initial data seeding
+// Seeds initial categories with levels and descriptions
 async function seedInitialData() {
   try {
     // Check if categories already exist

@@ -13,6 +13,7 @@ const {
   forgotPassword,
   resetPassword,
   userInfo,
+  createCustomerProfile
 } = require("../Controllers/authController");
 
 // E-commerce user routes
@@ -22,6 +23,9 @@ router.post("/api/auth/user/login", loginUser);
 // Dashboard admin/staff routes
 router.post("/api/auth/admin/register", registerAdmin);
 router.post("/api/auth/admin/login", loginAdmin);
+
+
+
 
 // Shared routes
 router.post("/api/auth/verify-token", verifyToken);

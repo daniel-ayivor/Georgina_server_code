@@ -1,22 +1,27 @@
 const Customer = require('../Models/customerModel');
-
-exports.createCustomer = async (req, res) => {
-  try {
-    const customer = await Customer.create(req.body);
-    res.status(201).json(customer);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-};
+const User = require('../Models/userModel');
+const Order = require('../Models/orderModel');
+const Booking = require('../Models/bookingModel');
 
 exports.getCustomers = async (req, res) => {
   try {
     const customers = await Customer.findAll();
-    res.status(200).json(customers);
+    const filtered = [];
+
+    for (const customer of customers) {
+      const stats = await computeCustomerStats(customer.userId);
+      if (stats.isCustomer) {
+        filtered.push({ ...customer.toJSON(), ...stats });
+      }
+    }
+
+    res.status(200).json(filtered);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+;
+
 
 exports.getCustomerById = async (req, res) => {
   try {

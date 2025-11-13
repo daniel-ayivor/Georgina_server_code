@@ -18,8 +18,4 @@ const Order = sequelize.define(
   { tableName: "orders", timestamps: true }
 );
 
-Order.associate = (models) => {
-  Order.belongsTo(models.User, { as: "customer", foreignKey: "userId" });
-};
-
 module.exports = Order;

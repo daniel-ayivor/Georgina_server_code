@@ -48,8 +48,4 @@ const Booking = sequelize.define(
   }
 );
 
-Booking.associate = (models) => {
-  Booking.belongsTo(models.User, { as: "customer", foreignKey: "userId" });
-};
-
 module.exports = Booking;

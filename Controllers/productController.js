@@ -18,6 +18,12 @@ const generateSlug = (name) => {
 const createProducts = async (req, res) => {
   try {
     const {
+      isFeatured,
+      isTrending,
+      isNewArrival,
+      featuredOrder,
+      trendingOrder,
+      newArrivalOrder,
       name,
       description,
       price,
@@ -73,6 +79,12 @@ const createProducts = async (req, res) => {
     }
 
     const product = await Product.create({
+          isFeatured: isFeatured === 'true' || isFeatured === true,
+      isTrending: isTrending === 'true' || isTrending === true,
+      isNewArrival: isNewArrival === 'true' || isNewArrival === true,
+      featuredOrder: featuredOrder ? parseInt(featuredOrder) : 0,
+      trendingOrder: trendingOrder ? parseInt(trendingOrder) : 0,
+      newArrivalOrder: newArrivalOrder ? parseInt(newArrivalOrder) : 0,
       name,
       slug,
       description: description || null,
@@ -274,6 +286,145 @@ const getProducts = async (req, res) => {
             message: error.message 
         });
     }
+};
+
+
+// Get Featured Products
+const getFeaturedProducts = async (req, res) => {
+  try {
+    const { limit } = req.query;
+    
+    const products = await Product.findAll({
+      where: { 
+        isFeatured: true,
+        isActive: true 
+      },
+      order: [
+        ['featuredOrder', 'ASC'],
+        ['createdAt', 'DESC']
+      ],
+      limit: limit ? parseInt(limit) : undefined
+    });
+    
+    res.status(200).json({ 
+      products, 
+      message: "Featured products retrieved successfully" 
+    });
+  } catch (error) {
+    console.error("Error retrieving featured products:", error);
+    res.status(500).json({ 
+      error: "Error retrieving featured products",
+      message: error.message 
+    });
+  }
+};
+
+// Get Trending Products
+const getTrendingProducts = async (req, res) => {
+  try {
+    const { limit } = req.query;
+    
+    const products = await Product.findAll({
+      where: { 
+        isTrending: true,
+        isActive: true 
+      },
+      order: [
+        ['trendingOrder', 'ASC'],
+        ['createdAt', 'DESC']
+      ],
+      limit: limit ? parseInt(limit) : undefined
+    });
+    
+    res.status(200).json({ 
+      products, 
+      message: "Trending products retrieved successfully" 
+    });
+  } catch (error) {
+    console.error("Error retrieving trending products:", error);
+    res.status(500).json({ 
+      error: "Error retrieving trending products",
+      message: error.message 
+    });
+  }
+};
+
+// Get New Arrivals
+const getNewArrivals = async (req, res) => {
+  try {
+    const { limit, days = 30 } = req.query;
+    
+    const dateThreshold = new Date();
+    dateThreshold.setDate(dateThreshold.getDate() - parseInt(days));
+    
+    const products = await Product.findAll({
+      where: { 
+        isActive: true,
+        createdAt: {
+          [Op.gte]: dateThreshold
+        }
+      },
+      order: [
+        ['isNewArrival', 'DESC'], // Manual new arrivals first
+        ['newArrivalOrder', 'ASC'],
+        ['createdAt', 'DESC']
+      ],
+      limit: limit ? parseInt(limit) : undefined
+    });
+    
+    res.status(200).json({ 
+      products, 
+      message: "New arrivals retrieved successfully" 
+    });
+  } catch (error) {
+    console.error("Error retrieving new arrivals:", error);
+    res.status(500).json({ 
+      error: "Error retrieving new arrivals",
+      message: error.message 
+    });
+  }
+};
+
+// Update product special categories
+const updateProductSpecialCategories = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { 
+      isFeatured, 
+      isTrending, 
+      isNewArrival,
+      featuredOrder,
+      trendingOrder,
+      newArrivalOrder
+    } = req.body;
+    
+    const product = await Product.findByPk(productId);
+    
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const updateData = {};
+    if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
+    if (isTrending !== undefined) updateData.isTrending = isTrending;
+    if (isNewArrival !== undefined) updateData.isNewArrival = isNewArrival;
+    if (featuredOrder !== undefined) updateData.featuredOrder = featuredOrder;
+    if (trendingOrder !== undefined) updateData.trendingOrder = trendingOrder;
+    if (newArrivalOrder !== undefined) updateData.newArrivalOrder = newArrivalOrder;
+
+    await product.update(updateData);
+    
+    res.status(200).json({ 
+      product, 
+      message: "Product special categories updated successfully" 
+    });
+  } catch (error) {
+    console.error("Error updating product special categories:", error);
+    res.status(500).json({ 
+      error: "Error updating product special categories",
+      message: error.message 
+    });
+  }
 };
 
 // Get Single Product by ID or Slug
@@ -520,9 +671,246 @@ const getAdminProductById = async (req, res) => {
     }
 };
 
+
+// Get All Special Products for Admin (with analytics)
+const getAdminSpecialProducts = async (req, res) => {
+  try {
+    const { type, limit, page = 1 } = req.query; // type: 'featured', 'trending', 'new-arrivals'
+    const pageSize = limit || 50;
+    const offset = (parseInt(page) - 1) * pageSize;
+
+    let whereClause = {};
+    let order = [];
+    
+    switch (type) {
+      case 'featured':
+        whereClause.isFeatured = true;
+        order = [['featuredOrder', 'ASC'], ['createdAt', 'DESC']];
+        break;
+      case 'trending':
+        whereClause.isTrending = true;
+        order = [['trendingOrder', 'ASC'], ['createdAt', 'DESC']];
+        break;
+      case 'new-arrivals':
+        whereClause.isNewArrival = true;
+        order = [['newArrivalOrder', 'ASC'], ['createdAt', 'DESC']];
+        break;
+      default:
+        // Return all special products
+        whereClause = {
+          [Op.or]: [
+            { isFeatured: true },
+            { isTrending: true },
+            { isNewArrival: true }
+          ]
+        };
+        order = [['updatedAt', 'DESC']];
+    }
+
+    const { count, rows: products } = await Product.findAndCountAll({
+      where: whereClause,
+      order,
+      limit: pageSize,
+      offset
+    });
+
+    // Analytics for admin
+    const analytics = {
+      totalFeatured: await Product.count({ where: { isFeatured: true } }),
+      totalTrending: await Product.count({ where: { isTrending: true } }),
+      totalNewArrivals: await Product.count({ where: { isNewArrival: true } }),
+      activeFeatured: await Product.count({ 
+        where: { isFeatured: true, isActive: true } 
+      }),
+      activeTrending: await Product.count({ 
+        where: { isTrending: true, isActive: true } 
+      }),
+      activeNewArrivals: await Product.count({ 
+        where: { isNewArrival: true, isActive: true } 
+      })
+    };
+
+    res.status(200).json({ 
+      products,
+      analytics,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(count / pageSize),
+        totalProducts: count,
+        hasNext: (offset + pageSize) < count,
+        hasPrev: parseInt(page) > 1
+      },
+      message: "Admin special products retrieved successfully" 
+    });
+  } catch (error) {
+    console.error("Error retrieving admin special products:", error);
+    res.status(500).json({ 
+      error: "Error retrieving admin special products",
+      message: error.message 
+    });
+  }
+};
+
+// Update Product Special Categories (Admin Only)
+// const updateProductSpecialCategories = async (req, res) => {
+//   try {
+//     const { productId } = req.params;
+//     const { 
+//       isFeatured, 
+//       isTrending, 
+//       isNewArrival,
+//       featuredOrder,
+//       trendingOrder,
+//       newArrivalOrder
+//     } = req.body;
+    
+//     const product = await Product.findByPk(productId);
+    
+//     if (!product) {
+//       return res.status(404).json({ message: "Product not found" });
+//     }
+
+//     const updateData = {};
+//     if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
+//     if (isTrending !== undefined) updateData.isTrending = isTrending;
+//     if (isNewArrival !== undefined) updateData.isNewArrival = isNewArrival;
+//     if (featuredOrder !== undefined) updateData.featuredOrder = parseInt(featuredOrder) || 0;
+//     if (trendingOrder !== undefined) updateData.trendingOrder = parseInt(trendingOrder) || 0;
+//     if (newArrivalOrder !== undefined) updateData.newArrivalOrder = parseInt(newArrivalOrder) || 0;
+
+//     await product.update(updateData);
+
+//     // Get updated product with associations
+//     const updatedProduct = await Product.findByPk(productId);
+    
+//     res.status(200).json({ 
+//       product: updatedProduct, 
+//       message: "Product special categories updated successfully" 
+//     });
+//   } catch (error) {
+//     console.error("Error updating product special categories:", error);
+//     res.status(500).json({ 
+//       error: "Error updating product special categories",
+//       message: error.message 
+//     });
+//   }
+// };
+
+// Bulk Update Special Categories (Admin Only)
+const bulkUpdateSpecialCategories = async (req, res) => {
+  try {
+    const { products } = req.body; // Array of { productId, updates }
+    
+    if (!Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ 
+        message: "Products array is required" 
+      });
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const item of products) {
+      try {
+        const { productId, updates } = item;
+        const product = await Product.findByPk(productId);
+        
+        if (!product) {
+          errors.push({ productId, error: "Product not found" });
+          continue;
+        }
+
+        const updateData = {};
+        if (updates.isFeatured !== undefined) updateData.isFeatured = updates.isFeatured;
+        if (updates.isTrending !== undefined) updateData.isTrending = updates.isTrending;
+        if (updates.isNewArrival !== undefined) updateData.isNewArrival = updates.isNewArrival;
+        if (updates.featuredOrder !== undefined) updateData.featuredOrder = parseInt(updates.featuredOrder) || 0;
+        if (updates.trendingOrder !== undefined) updateData.trendingOrder = parseInt(updates.trendingOrder) || 0;
+        if (updates.newArrivalOrder !== undefined) updateData.newArrivalOrder = parseInt(updates.newArrivalOrder) || 0;
+
+        await product.update(updateData);
+        results.push({ productId, success: true });
+      } catch (error) {
+        errors.push({ productId: item.productId, error: error.message });
+      }
+    }
+
+    res.status(200).json({ 
+      results,
+      errors,
+      message: `Bulk update completed. ${results.length} successful, ${errors.length} failed.` 
+    });
+  } catch (error) {
+    console.error("Error in bulk update special categories:", error);
+    res.status(500).json({ 
+      error: "Error in bulk update",
+      message: error.message 
+    });
+  }
+};
+
+// Get Products Not in Special Categories (For Admin to add new ones)
+const getProductsNotInSpecialCategories = async (req, res) => {
+  try {
+    const { limit = 20, page = 1, search } = req.query;
+    const pageSize = parseInt(limit);
+    const offset = (parseInt(page) - 1) * pageSize;
+
+    let whereClause = {
+      [Op.and]: [
+        { isFeatured: false },
+        { isTrending: false },
+        { isNewArrival: false }
+      ]
+    };
+
+    if (search) {
+      whereClause[Op.and].push({
+        [Op.or]: [
+          { name: { [Op.like]: `%${search}%` } },
+          { description: { [Op.like]: `%${search}%` } },
+          { brand: { [Op.like]: `%${search}%` } }
+        ]
+      });
+    }
+
+    const { count, rows: products } = await Product.findAndCountAll({
+      where: whereClause,
+      order: [['createdAt', 'DESC']],
+      limit: pageSize,
+      offset
+    });
+
+    res.status(200).json({ 
+      products,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(count / pageSize),
+        totalProducts: count,
+        hasNext: (offset + pageSize) < count,
+        hasPrev: parseInt(page) > 1
+      },
+      message: "Products not in special categories retrieved successfully" 
+    });
+  } catch (error) {
+    console.error("Error retrieving products not in special categories:", error);
+    res.status(500).json({ 
+      error: "Error retrieving products",
+      message: error.message 
+    });
+  }
+};
+
 module.exports = {
     deleteProduct,
     createProducts,
+    getFeaturedProducts,
+    getTrendingProducts,
+    getNewArrivals,
+    updateProductSpecialCategories,
+    bulkUpdateSpecialCategories,
+    getProductsNotInSpecialCategories,
+    getAdminSpecialProducts,
     getProduct,
     getProducts,
     updateProduct,

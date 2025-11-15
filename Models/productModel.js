@@ -82,6 +82,65 @@ const Product = sequelize.define('Product', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+
+
+    // Add these new fields for special categories
+  isFeatured: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  isTrending: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  // New Arrivals can be determined by createdAt date
+  // but you can also add a manual flag if needed
+  isNewArrival: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  
+  // Optional: Add fields to control display order
+  featuredOrder: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  trendingOrder: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  newArrivalOrder: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  } , // Add these new fields for special categories
+  isFeatured: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  isTrending: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  // New Arrivals can be determined by createdAt date
+  // but you can also add a manual flag if needed
+  isNewArrival: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  
+  // Optional: Add fields to control display order
+  featuredOrder: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  trendingOrder: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  newArrivalOrder: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  }
 }, {
   tableName: 'products',
   timestamps: true,

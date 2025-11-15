@@ -127,6 +127,14 @@ const Product = sequelize.define('Product', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  wishList : {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  size : {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   
   // Optional: Add fields to control display order
   featuredOrder: {

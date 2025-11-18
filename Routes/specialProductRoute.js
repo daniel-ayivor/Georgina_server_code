@@ -23,6 +23,12 @@ router.get(
     authorizeRoles('admin'),
     getProductsNotInSpecialCategories
 );
+router.patch(
+    '/api/admin/products/special/bulk/update',
+    authenticate,
+    authorizeRoles('admin'),
+    bulkUpdateSpecialCategories
+);
 
 router.patch(
     '/api/admin/products/special/:productId',
@@ -31,11 +37,5 @@ router.patch(
     updateProductSpecialCategories
 );
 
-router.patch(
-    '/api/admin/products/special/bulk/update',
-    authenticate,
-    authorizeRoles('admin'),
-    bulkUpdateSpecialCategories
-);
 
 module.exports = router;

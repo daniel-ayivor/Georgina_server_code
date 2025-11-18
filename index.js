@@ -39,7 +39,6 @@ app.use(cors({
     'https://georgina-services-limited-dashboard.vercel.app',
     'https://snappy-cart-carousel.vercel.app',
     'https://shop-clean-sparkle.vercel.app',
-    'https://georgina-services-limited-dashboard.vercel.app',
     'http://localhost:8080',
     'http://localhost:8082',
     'http://localhost:8083',
@@ -359,13 +358,13 @@ app.use(contactRoute);
 app.use(chatbotRoutes);
 app.use(paymentRoute);
 app.use(serviceRoute);
+app.use(specialProductRoute)
 app.use(productRoute);
 app.use(categoryRoute); 
 app.use(adminorderItemsRoutes);
 app.use(notificationRoute);
 app.use(userOrderRoutes);
 app.use(adminOrderRoutes);
-app.use(specialProductRoute)
 
 // Health check route
 app.get('/health', (req, res) => {

@@ -45,15 +45,6 @@ router.get('/new-arrivals', getNewArrivals);
 router.patch('/:productId/special-categories', updateProductSpecialCategories);
 
 
-// Admin special products routes
-// In your backend routes file
-router.get('/admin/products/special', getAdminSpecialProducts);
-router.get('/admin/products/special/available', getProductsNotInSpecialCategories);
-router.patch('/admin/products/special/:productId', updateProductSpecialCategories);
-router.patch('/admin/products/special/bulk/update', bulkUpdateSpecialCategories);
-/**
- * 🛠️ Admin Routes — Requires Authentication and Role Check
- */
 
 router.get(
     '/api/admin/products',

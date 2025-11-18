@@ -24,6 +24,7 @@ const paymentRoute = require("./Routes/paymentRoutes");
 const userOrderRoutes = require('./Routes/userOrderRoutes');
 const adminOrderRoutes = require('./Routes/adminOrderRoutes');
 const adminorderItemsRoutes = require('./Routes/orderItemsRoute');
+const specialProductRoute = require('./Routes/specialProductRoute');
 
 // Import Cloudinary configuration
 const { cloudinary } = require('./config/cloudinary');
@@ -364,6 +365,7 @@ app.use(adminorderItemsRoutes);
 app.use(notificationRoute);
 app.use(userOrderRoutes);
 app.use(adminOrderRoutes);
+app.use(specialProductRoute)
 
 // Health check route
 app.get('/health', (req, res) => {

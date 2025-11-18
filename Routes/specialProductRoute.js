@@ -7,32 +7,32 @@ const {
     bulkUpdateSpecialCategories
 } = require('../Controllers/productController');
 
-const { authenticate, authorizeRoles } = require('../middleware/auth');
+const { authenticate, authorizeRoles } = require('../Middleware/Middelware');
 
 // Admin special products routes
 router.get(
-    '/admin/products/special',
+    '/api/admin/products/special',
     authenticate,
     authorizeRoles('admin'),
     getAdminSpecialProducts
 );
 
 router.get(
-    '/admin/products/special/available',
+    '/api/admin/products/special/available',
     authenticate,
     authorizeRoles('admin'),
     getProductsNotInSpecialCategories
 );
 
 router.patch(
-    '/admin/products/special/:productId',
+    '/api/admin/products/special/:productId',
     authenticate,
     authorizeRoles('admin'),
     updateProductSpecialCategories
 );
 
 router.patch(
-    '/admin/products/special/bulk/update',
+    '/api/admin/products/special/bulk/update',
     authenticate,
     authorizeRoles('admin'),
     bulkUpdateSpecialCategories

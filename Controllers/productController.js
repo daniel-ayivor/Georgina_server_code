@@ -678,13 +678,21 @@ const getAdminProductById = async (req, res) => {
 
 
 // Get All Special Products for Admin (with analytics)
+// Get All Special Products for Admin (with analytics)
 const getAdminSpecialProducts = async (req, res) => {
   try {
     const { type, limit = 20, page = 1, search } = req.query;
     const pageSize = parseInt(limit);
     const offset = (parseInt(page) - 1) * pageSize;
 
-    console.log('Query params:', { type, limit, page, search }); // Debug log
+    console.log('🔍 Special Products Query:', { 
+      type, 
+      limit, 
+      page, 
+      search,
+      pageSize,
+      offset 
+    });
 
     let whereClause = {};
     let order = [];
@@ -722,23 +730,23 @@ const getAdminSpecialProducts = async (req, res) => {
       whereClause = {
         ...whereClause,
         [Op.or]: [
-          { name: { [Op.like]: `%${search}%` } },
-          { description: { [Op.like]: `%${search}%` } },
-          { brand: { [Op.like]: `%${search}%` } }
+          { name: { [Op.iLike]: `%${search}%` } }, // Use iLike for case-insensitive search
+          { description: { [Op.iLike]: `%${search}%` } },
+          { brand: { [Op.iLike]: `%${search}%` } }
         ]
       };
     }
+
+    console.log('📊 Database Query:', { whereClause, order, limit: pageSize, offset });
 
     const { count, rows: products } = await Product.findAndCountAll({
       where: whereClause,
       order,
       limit: pageSize,
-      offset,
-      // Include any necessary associations
-      include: [
-        // Add your associations here if needed
-      ]
+      offset
     });
+
+    console.log('✅ Found products:', products.length, 'Total:', count);
 
     // Analytics for admin
     const analytics = {
@@ -756,6 +764,8 @@ const getAdminSpecialProducts = async (req, res) => {
       })
     };
 
+    console.log('📈 Analytics:', analytics);
+
     res.status(200).json({ 
       success: true,
       products,
@@ -770,15 +780,15 @@ const getAdminSpecialProducts = async (req, res) => {
       message: "Admin special products retrieved successfully" 
     });
   } catch (error) {
-    console.error("Error retrieving admin special products:", error);
+    console.error("❌ Error retrieving admin special products:", error);
     res.status(500).json({ 
       success: false,
       error: "Error retrieving admin special products",
-      message: error.message 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
-
 // Bulk Update Special Categories (Admin Only)
 const bulkUpdateSpecialCategories = async (req, res) => {
   try {

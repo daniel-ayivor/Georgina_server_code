@@ -676,46 +676,68 @@ const getAdminProductById = async (req, res) => {
 };
 
 
+
 // Get All Special Products for Admin (with analytics)
 const getAdminSpecialProducts = async (req, res) => {
   try {
-    const { type, limit, page = 1 } = req.query; // type: 'featured', 'trending', 'new-arrivals'
-    const pageSize = limit || 50;
+    const { type, limit = 20, page = 1, search } = req.query;
+    const pageSize = parseInt(limit);
     const offset = (parseInt(page) - 1) * pageSize;
+
+    console.log('Query params:', { type, limit, page, search }); // Debug log
 
     let whereClause = {};
     let order = [];
     
-    switch (type) {
-      case 'featured':
-        whereClause.isFeatured = true;
-        order = [['featuredOrder', 'ASC'], ['createdAt', 'DESC']];
-        break;
-      case 'trending':
-        whereClause.isTrending = true;
-        order = [['trendingOrder', 'ASC'], ['createdAt', 'DESC']];
-        break;
-      case 'new-arrivals':
-        whereClause.isNewArrival = true;
-        order = [['newArrivalOrder', 'ASC'], ['createdAt', 'DESC']];
-        break;
-      default:
-        // Return all special products
-        whereClause = {
-          [Op.or]: [
-            { isFeatured: true },
-            { isTrending: true },
-            { isNewArrival: true }
-          ]
-        };
-        order = [['updatedAt', 'DESC']];
+    // Handle the type parameter safely
+    if (type && ['featured', 'trending', 'new-arrivals'].includes(type)) {
+      switch (type) {
+        case 'featured':
+          whereClause.isFeatured = true;
+          order = [['featuredOrder', 'ASC'], ['createdAt', 'DESC']];
+          break;
+        case 'trending':
+          whereClause.isTrending = true;
+          order = [['trendingOrder', 'ASC'], ['createdAt', 'DESC']];
+          break;
+        case 'new-arrivals':
+          whereClause.isNewArrival = true;
+          order = [['newArrivalOrder', 'ASC'], ['createdAt', 'DESC']];
+          break;
+      }
+    } else {
+      // Return all special products if no specific type or invalid type
+      whereClause = {
+        [Op.or]: [
+          { isFeatured: true },
+          { isTrending: true },
+          { isNewArrival: true }
+        ]
+      };
+      order = [['updatedAt', 'DESC']];
+    }
+
+    // Add search functionality if provided
+    if (search) {
+      whereClause = {
+        ...whereClause,
+        [Op.or]: [
+          { name: { [Op.like]: `%${search}%` } },
+          { description: { [Op.like]: `%${search}%` } },
+          { brand: { [Op.like]: `%${search}%` } }
+        ]
+      };
     }
 
     const { count, rows: products } = await Product.findAndCountAll({
       where: whereClause,
       order,
       limit: pageSize,
-      offset
+      offset,
+      // Include any necessary associations
+      include: [
+        // Add your associations here if needed
+      ]
     });
 
     // Analytics for admin
@@ -735,6 +757,7 @@ const getAdminSpecialProducts = async (req, res) => {
     };
 
     res.status(200).json({ 
+      success: true,
       products,
       analytics,
       pagination: {
@@ -749,56 +772,12 @@ const getAdminSpecialProducts = async (req, res) => {
   } catch (error) {
     console.error("Error retrieving admin special products:", error);
     res.status(500).json({ 
+      success: false,
       error: "Error retrieving admin special products",
       message: error.message 
     });
   }
 };
-
-// Update Product Special Categories (Admin Only)
-// const updateProductSpecialCategories = async (req, res) => {
-//   try {
-//     const { productId } = req.params;
-//     const { 
-//       isFeatured, 
-//       isTrending, 
-//       isNewArrival,
-//       featuredOrder,
-//       trendingOrder,
-//       newArrivalOrder
-//     } = req.body;
-    
-//     const product = await Product.findByPk(productId);
-    
-//     if (!product) {
-//       return res.status(404).json({ message: "Product not found" });
-//     }
-
-//     const updateData = {};
-//     if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
-//     if (isTrending !== undefined) updateData.isTrending = isTrending;
-//     if (isNewArrival !== undefined) updateData.isNewArrival = isNewArrival;
-//     if (featuredOrder !== undefined) updateData.featuredOrder = parseInt(featuredOrder) || 0;
-//     if (trendingOrder !== undefined) updateData.trendingOrder = parseInt(trendingOrder) || 0;
-//     if (newArrivalOrder !== undefined) updateData.newArrivalOrder = parseInt(newArrivalOrder) || 0;
-
-//     await product.update(updateData);
-
-//     // Get updated product with associations
-//     const updatedProduct = await Product.findByPk(productId);
-    
-//     res.status(200).json({ 
-//       product: updatedProduct, 
-//       message: "Product special categories updated successfully" 
-//     });
-//   } catch (error) {
-//     console.error("Error updating product special categories:", error);
-//     res.status(500).json({ 
-//       error: "Error updating product special categories",
-//       message: error.message 
-//     });
-//   }
-// };
 
 // Bulk Update Special Categories (Admin Only)
 const bulkUpdateSpecialCategories = async (req, res) => {

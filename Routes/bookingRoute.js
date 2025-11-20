@@ -13,8 +13,10 @@ const {
   getUserDashboardBookings,
   getDashboardUpcomingBookings,
   getRecentBookings,
-  getMyBookingById
+  getMyBookingById,
+  testEmailSystem
 } = require('../Controllers/bookingController');
+router.post('/test-email-system', testEmailSystem);
 
 // =============================================
 // PUBLIC ROUTES (No authentication required)

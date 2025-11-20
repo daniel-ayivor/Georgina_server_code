@@ -3,8 +3,7 @@ const OrderItem = require('../Models/orderItemModel');
 const Product = require('../Models/productModel');
 const User = require('../Models/userModel');
 
-// Controllers/userOrder.Controller.js
-// const { Order, OrderItem, Product, User } = require('../Models');
+
 
 const userOrderController = {
   // Create a new order

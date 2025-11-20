@@ -99,4 +99,4 @@ const userInfo = async (req, res) => {
     }
   };
 
-module.exports={deleteUser, createUser, updateUser, deleteUser,getAllUsers,userInfo}
+module.exports={deleteUser, createUser, updateUser, deleteUser, getAllUsers, userInfo}

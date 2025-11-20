@@ -3,6 +3,14 @@ const multer = require("multer");
 const path = require("path");
 const fs = require('fs');
 const { Op } = require('sequelize');
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
 
 // Helper function to generate slug
 const generateSlug = (name) => {
@@ -80,31 +88,32 @@ const createProducts = async (req, res) => {
       tagsArray = typeof tags === 'string' ? JSON.parse(tags) : tags;
     }
 
-    const product = await Product.create({
-          isFeatured: isFeatured === 'true' || isFeatured === true,
-      isTrending: isTrending === 'true' || isTrending === true,
-      isNewArrival: isNewArrival === 'true' || isNewArrival === true,
-      featuredOrder: featuredOrder ? parseInt(featuredOrder) : 0,
-      trendingOrder: trendingOrder ? parseInt(trendingOrder) : 0,
-      newArrivalOrder: newArrivalOrder ? parseInt(newArrivalOrder) : 0,
-      name,
-      slug,
-      wishList: wishList === 'true' || wishList === true,
-      size: size || null,
-      description: description || null,
-      price: parseFloat(price),
-      categoryLevel1,
-      categoryLevel2: categoryLevel2 || null,
-      categoryLevel3: categoryLevel3 || null,
-      serviceType: serviceType || 'physical',
-      serviceDuration: serviceDuration || null,
-      unit: unit || 'piece',
-      stock: stock ? parseInt(stock) : 0,
-      images: [imageUrl], // Store Cloudinary URL as array
-      tags: tagsArray,
-      brand: brand || null,
-      isActive: isActive !== undefined ? isActive === 'true' : true
-    });
+const product = await Product.create({
+    name,
+    slug,
+    description: description || null,
+    price: parseFloat(price),
+    categoryLevel1,
+    categoryLevel2: categoryLevel2 || null,
+    categoryLevel3: categoryLevel3 || null,
+    serviceType: serviceType || 'physical',
+    serviceDuration: serviceDuration || null,
+    unit: unit || 'piece',
+    stock: stock ? parseInt(stock) : 0,
+    images: [imageUrl],
+    isActive: isActive !== undefined ? isActive === 'true' || isActive === true : true,
+    isFeatured: isFeatured === 'true' || isFeatured === true,
+    isTrending: isTrending === 'true' || isTrending === true,
+    isNewArrival: isNewArrival === 'true' || isNewArrival === true,
+    featuredOrder: featuredOrder ? parseInt(featuredOrder) : 0,
+    trendingOrder: trendingOrder ? parseInt(trendingOrder) : 0,
+    newArrivalOrder: newArrivalOrder ? parseInt(newArrivalOrder) : 0,
+    wishList: wishList === 'true' || wishList === true,
+    size: size || null,
+    tags: tags ? (typeof tags === 'string' ? JSON.parse(tags) : tags) : [],
+    brand: brand || null
+});
+
 
     res.status(201).json({ 
       message: 'Product created successfully', 
@@ -409,12 +418,19 @@ const updateProductSpecialCategories = async (req, res) => {
     }
 
     const updateData = {};
-    if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
-    if (isTrending !== undefined) updateData.isTrending = isTrending;
-    if (isNewArrival !== undefined) updateData.isNewArrival = isNewArrival;
-    if (featuredOrder !== undefined) updateData.featuredOrder = featuredOrder;
-    if (trendingOrder !== undefined) updateData.trendingOrder = trendingOrder;
-    if (newArrivalOrder !== undefined) updateData.newArrivalOrder = newArrivalOrder;
+    if (updates.isFeatured !== undefined) updateData.isFeatured = updates.isFeatured === 'true' || updates.isFeatured === true;
+if (updates.isTrending !== undefined) updateData.isTrending = updates.isTrending === 'true' || updates.isTrending === true;
+if (updates.isNewArrival !== undefined) updateData.isNewArrival = updates.isNewArrival === 'true' || updates.isNewArrival === true;
+if (updates.featuredOrder !== undefined) updateData.featuredOrder = parseInt(updates.featuredOrder) || 0;
+if (updates.trendingOrder !== undefined) updateData.trendingOrder = parseInt(updates.trendingOrder) || 0;
+if (updates.newArrivalOrder !== undefined) updateData.newArrivalOrder = parseInt(updates.newArrivalOrder) || 0;
+
+    // if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
+    // if (isTrending !== undefined) updateData.isTrending = isTrending;
+    // if (isNewArrival !== undefined) updateData.isNewArrival = isNewArrival;
+    // if (featuredOrder !== undefined) updateData.featuredOrder = featuredOrder;
+    // if (trendingOrder !== undefined) updateData.trendingOrder = trendingOrder;
+    // if (newArrivalOrder !== undefined) updateData.newArrivalOrder = newArrivalOrder;
 
     await product.update(updateData);
     
@@ -764,7 +780,7 @@ const getAdminSpecialProducts = async (req, res) => {
       })
     };
 
-    console.log('📈 Analytics:', analytics);
+    console.log(' Analytics:', analytics);
 
     res.status(200).json({ 
       success: true,
@@ -780,7 +796,7 @@ const getAdminSpecialProducts = async (req, res) => {
       message: "Admin special products retrieved successfully" 
     });
   } catch (error) {
-    console.error("❌ Error retrieving admin special products:", error);
+    console.error("Error retrieving admin special products:", error);
     res.status(500).json({ 
       success: false,
       error: "Error retrieving admin special products",

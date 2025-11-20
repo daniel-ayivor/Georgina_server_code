@@ -1872,5 +1872,5 @@ module.exports = {
   getDashboardUpcomingBookings,
   getMyBookingById,
   testEmailSystem,
-  testEmail // NEW: Add test email function
+  testEmail 
 };

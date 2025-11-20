@@ -1107,9 +1107,54 @@ const createBooking = async (req, res) => {
       userId
     } = req.body;
 
-    console.log('🔍 [EMAIL-DEBUG] Starting booking creation for:', customerEmail);
+    console.log('🔍 [BACKEND-DEBUG] Creating booking with data:', {
+      customerName,
+      customerEmail, 
+      serviceType,
+      userId
+    });
 
-    // ... (your existing validation code)
+    console.log('🔍 [BACKEND-DEBUG] Full request body:', req.body);
+
+    // Validate that userId is provided
+    if (!userId) {
+      console.error('❌ [BACKEND-DEBUG] userId is missing in request');
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        errors: [{ field: "userId", message: "Booking.userId cannot be null" }]
+      });
+    }
+
+    // Convert userId to number to be safe
+    const numericUserId = parseInt(userId);
+    if (isNaN(numericUserId)) {
+      console.error('❌ [BACKEND-DEBUG] userId is not a valid number:', userId);
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        errors: [{ field: "userId", message: "Booking.userId must be a valid number" }]
+      });
+    }
+
+    // Check if user exists - ONLY if User model is available
+    let userExists = true;
+    try {
+      const user = await User.findByPk(numericUserId);
+      if (!user) {
+        console.error('❌ [BACKEND-DEBUG] User not found with ID:', numericUserId);
+        userExists = false;
+      } else {
+        console.log('✅ [BACKEND-DEBUG] User found:', user.id, user.email);
+      }
+    } catch (userError) {
+      console.warn('⚠️ [BACKEND-DEBUG] Could not verify user existence:', userError.message);
+      // Continue without user verification if User model isn't available
+      userExists = true; // Assume user exists to proceed
+    }
+
+    // Validate that selectedFeatures is an array
+    const featuresArray = Array.isArray(selectedFeatures) ? selectedFeatures : [];
 
     const booking = await Booking.create({
       customerName,
@@ -1126,29 +1171,23 @@ const createBooking = async (req, res) => {
       userId: numericUserId
     });
 
-    console.log('✅ [EMAIL-DEBUG] Booking created:', booking.bookingReference);
+    console.log('✅ [BACKEND-DEBUG] Booking created successfully:', booking.bookingReference);
+    console.log('✅ [BACKEND-DEBUG] Booking userId:', booking.userId);
 
-    // ✅ ENHANCED EMAIL SENDING WITH BETTER DEBUGGING
+    // ✅ SEND EMAIL ON BOOKING CREATION
     let emailSent = false;
-    let emailError = null;
-    
     try {
-      console.log(`📧 [EMAIL-DEBUG] Preparing to send booking received email to: ${booking.customerEmail}`);
-      
       const emailTemplate = emailTemplates.bookingReceived(booking);
-      console.log(`📧 [EMAIL-DEBUG] Email subject: ${emailTemplate.subject}`);
-      
       emailSent = await sendEmail(booking.customerEmail, emailTemplate.subject, emailTemplate.html);
       
       if (emailSent) {
-        console.log(`✅ [EMAIL-DEBUG] Booking received email successfully sent to ${booking.customerEmail}`);
+        console.log(`📧 Booking received email sent to ${booking.customerEmail}`);
       } else {
-        console.error(`❌ [EMAIL-DEBUG] Failed to send booking received email to ${booking.customerEmail}`);
-        emailError = 'Email sending function returned false';
+        console.error('❌ Failed to send booking received email');
       }
     } catch (emailError) {
-      console.error(`❌ [EMAIL-DEBUG] Error sending booking received email:`, emailError);
-      emailError = emailError.message;
+      console.error('❌ Error sending booking received email:', emailError);
+      // Don't fail the booking creation if email fails
     }
 
     res.status(201).json({
@@ -1157,7 +1196,6 @@ const createBooking = async (req, res) => {
       data: {
         bookingReference: booking.bookingReference,
         customerName: booking.customerName,
-        customerEmail: booking.customerEmail,
         serviceType: booking.serviceType,
         selectedFeatures: booking.selectedFeatures,
         date: booking.date,
@@ -1167,11 +1205,7 @@ const createBooking = async (req, res) => {
         status: booking.status,
         userId: booking.userId
       },
-      email: {
-        sent: emailSent,
-        error: emailError,
-        recipient: booking.customerEmail
-      }
+      emailSent: emailSent // ✅ Include email status in response
     });
 
   } catch (error) {

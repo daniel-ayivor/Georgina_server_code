@@ -399,6 +399,7 @@ const getNewArrivals = async (req, res) => {
 };
 
 // Update product special categories
+// ✅ CORRECT - Use req.body instead of non-existent 'updates'
 const updateProductSpecialCategories = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -418,19 +419,12 @@ const updateProductSpecialCategories = async (req, res) => {
     }
 
     const updateData = {};
-    if (updates.isFeatured !== undefined) updateData.isFeatured = updates.isFeatured === 'true' || updates.isFeatured === true;
-if (updates.isTrending !== undefined) updateData.isTrending = updates.isTrending === 'true' || updates.isTrending === true;
-if (updates.isNewArrival !== undefined) updateData.isNewArrival = updates.isNewArrival === 'true' || updates.isNewArrival === true;
-if (updates.featuredOrder !== undefined) updateData.featuredOrder = parseInt(updates.featuredOrder) || 0;
-if (updates.trendingOrder !== undefined) updateData.trendingOrder = parseInt(updates.trendingOrder) || 0;
-if (updates.newArrivalOrder !== undefined) updateData.newArrivalOrder = parseInt(updates.newArrivalOrder) || 0;
-
-    // if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
-    // if (isTrending !== undefined) updateData.isTrending = isTrending;
-    // if (isNewArrival !== undefined) updateData.isNewArrival = isNewArrival;
-    // if (featuredOrder !== undefined) updateData.featuredOrder = featuredOrder;
-    // if (trendingOrder !== undefined) updateData.trendingOrder = trendingOrder;
-    // if (newArrivalOrder !== undefined) updateData.newArrivalOrder = newArrivalOrder;
+    if (isFeatured !== undefined) updateData.isFeatured = isFeatured === 'true' || isFeatured === true;
+    if (isTrending !== undefined) updateData.isTrending = isTrending === 'true' || isTrending === true;
+    if (isNewArrival !== undefined) updateData.isNewArrival = isNewArrival === 'true' || isNewArrival === true;
+    if (featuredOrder !== undefined) updateData.featuredOrder = parseInt(featuredOrder) || 0;
+    if (trendingOrder !== undefined) updateData.trendingOrder = parseInt(trendingOrder) || 0;
+    if (newArrivalOrder !== undefined) updateData.newArrivalOrder = parseInt(newArrivalOrder) || 0;
 
     await product.update(updateData);
     

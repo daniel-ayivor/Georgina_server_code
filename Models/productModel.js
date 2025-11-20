@@ -101,7 +101,7 @@ type: DataTypes.INTEGER,
 defaultValue: 0,
 },
 wishList: {
-type: DataTypes.INTEGER,  // changed from INTEGER to BOOLEAN
+type: DataTypes.BOOLEAN,
 defaultValue: false,
 },
 size: {

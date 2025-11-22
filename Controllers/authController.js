@@ -153,55 +153,7 @@ const loginUser = async (req, res) => {
   }
 };
 
-// Login Admin (for dashboard admins/staff)
-// const loginAdmin = async (req, res) => {
-//   try {
-//     const { email, password } = req.body;
 
-//     if (!email || !password) {
-//       return res.status(400).json({ message: "Email and password are required" });
-//     }
-
-//     // Find admin by email
-//     const admin = await User.findOne({ where: { email } });
-
-//     if (!admin) {
-//       return res.status(400).json({ message: "Invalid credentials" });
-//     }
-
-//     // Check if user has admin role (admin or any other admin role you might have)
-//     if (admin.role !== "admin") {
-//       return res.status(403).json({ message: "Access denied. Admin login only." });
-//     }
-
-//     // Compare password
-//     const validPassword = await bcrypt.compare(password, admin.password);
-//     if (!validPassword) {
-//       return res.status(400).json({ message: "Invalid credentials" });
-//     }
-
-//     // Generate JWT token
-//     const token = jwt.sign(
-//       { userId: admin.id, role: admin.role },
-//       process.env.JWT_SECRET,
-//       { expiresIn: "1h" }
-//     );
-
-//     res.status(200).json({
-//       token,
-//       admin: {
-//         id: admin.id,
-//         name: admin.name,
-//         email: admin.email,
-//         role: admin.role,
-//       },
-//     });
-//   } catch (error) {
-//     console.error("Error logging in admin", error);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// };
-// Login Admin (for dashboard admins/staff)
 const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -354,7 +306,6 @@ const userInfo = async (req, res) => {
 };
 
 
-// Add this to your authController.js
 
 // Verify Token Endpoint
 const verifyToken = async (req, res) => {
@@ -443,6 +394,173 @@ const verifyToken = async (req, res) => {
     });
   }
 };
+
+
+
+// // Update User Profile (Basic Info - name, contact)
+// const updateProfile = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { name, contact } = req.body;
+
+//     // Check if user exists
+//     const user = await User.findByPk(id);
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     // Validate input
+//     if (!name && !contact) {
+//       return res.status(400).json({ message: "At least one field (name or contact) is required" });
+//     }
+
+//     // Update fields
+//     const updateData = {};
+//     if (name) updateData.name = name;
+//     if (contact) updateData.contact = contact;
+
+//     await User.update(updateData, { where: { id } });
+
+//     // Get updated user
+//     const updatedUser = await User.findByPk(id, {
+//       attributes: { exclude: ['password'] }
+//     });
+
+//     res.status(200).json({
+//       message: "Profile updated successfully",
+//       user: updatedUser
+//     });
+//   } catch (error) {
+//     console.error("Error updating profile", error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+// // Update User Email
+// const updateEmail = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { email, password } = req.body;
+
+//     if (!email || !password) {
+//       return res.status(400).json({ message: "Email and password are required" });
+//     }
+
+//     const user = await User.findByPk(id);
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     // Verify password
+//     const validPassword = await bcrypt.compare(password, user.password);
+//     if (!validPassword) {
+//       return res.status(400).json({ message: "Invalid password" });
+//     }
+
+//     // Check if new email already exists
+//     const existingUser = await User.findOne({ where: { email } });
+//     if (existingUser && existingUser.id !== parseInt(id)) {
+//       return res.status(400).json({ message: "Email already in use" });
+//     }
+
+//     // Update email
+//     await User.update({ email }, { where: { id } });
+
+//     const updatedUser = await User.findByPk(id, {
+//       attributes: { exclude: ['password'] }
+//     });
+
+//     res.status(200).json({
+//       message: "Email updated successfully",
+//       user: updatedUser
+//     });
+//   } catch (error) {
+//     console.error("Error updating email", error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+// // Update Password
+// const updatePassword = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { currentPassword, newPassword } = req.body;
+
+//     if (!currentPassword || !newPassword) {
+//       return res.status(400).json({ message: "Current password and new password are required" });
+//     }
+
+//     if (newPassword.length < 6) {
+//       return res.status(400).json({ message: "New password must be at least 6 characters long" });
+//     }
+
+//     const user = await User.findByPk(id);
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     // Verify current password
+//     const validPassword = await bcrypt.compare(currentPassword, user.password);
+//     if (!validPassword) {
+//       return res.status(400).json({ message: "Current password is incorrect" });
+//     }
+
+//     // Hash new password
+//     const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+//     // Update password
+//     await User.update({ password: hashedPassword }, { where: { id } });
+
+//     res.status(200).json({ message: "Password updated successfully" });
+//   } catch (error) {
+//     console.error("Error updating password", error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+// // Complete Profile Update (Multiple fields at once)
+// const updateUserDetails = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { name, contact, currentPassword } = req.body;
+
+//     const user = await User.findByPk(id);
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     // If changing sensitive fields, require password verification
+//     if (currentPassword) {
+//       const validPassword = await bcrypt.compare(currentPassword, user.password);
+//       if (!validPassword) {
+//         return res.status(400).json({ message: "Current password is incorrect" });
+//       }
+//     }
+
+//     const updateData = {};
+//     if (name) updateData.name = name;
+//     if (contact) updateData.contact = contact;
+
+//     // Check if there are fields to update
+//     if (Object.keys(updateData).length === 0) {
+//       return res.status(400).json({ message: "No fields to update" });
+//     }
+
+//     await User.update(updateData, { where: { id } });
+
+//     const updatedUser = await User.findByPk(id, {
+//       attributes: { exclude: ['password'] }
+//     });
+
+//     res.status(200).json({
+//       message: "User details updated successfully",
+//       user: updatedUser
+//     });
+//   } catch (error) {
+//     console.error("Error updating user details", error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
 
 module.exports = {
   registerUser,

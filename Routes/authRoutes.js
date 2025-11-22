@@ -13,7 +13,7 @@ const {
   forgotPassword,
   resetPassword,
   userInfo,
-  createCustomerProfile
+  
 } = require("../Controllers/authController");
 
 // E-commerce user routes

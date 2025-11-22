@@ -11,12 +11,22 @@ const {
   deleteCategory,
   bulkCreateCategories,
   getCategoriesByLevel,
-  getSubcategories
+  getSubcategories,
+  deleteSubcategories,
+  deleteSubcategory,
+  safeDeleteCategory
+  
 } = require('../Controllers/categoryController');
 
 /**
  * 🌳 Public Category Routes — No Authentication Required
  */
+// dletion
+// Enhanced deletion routes
+
+router.delete('/:parentId/subcategories', deleteSubcategories); // Bulk delete subcategories
+router.delete('/:parentId/subcategories/:subcategoryId', deleteSubcategory); // Specific subcategory delete
+router.delete('/:id/safe', safeDeleteCategory); // Safe delete with archive
 
 // Get all categories with optional filtering
 router.get('/api/categories', getCategories);

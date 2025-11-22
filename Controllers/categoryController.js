@@ -262,3 +262,314 @@ exports.getSubcategories = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+
+// Enhanced Delete Category with multiple options
+exports.deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { deleteSubcategories, moveToParent } = req.query;
+
+    console.log(`🗑️ Delete request for category ${id}`, { deleteSubcategories, moveToParent });
+
+    const category = await Category.findByPk(id);
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    // Check if category has children
+    const children = await Category.findAll({ where: { parentId: id } });
+    const hasChildren = children.length > 0;
+
+    if (hasChildren) {
+      // Option 1: Delete all subcategories (cascading delete)
+      if (deleteSubcategories === 'true') {
+        console.log(`🚀 Deleting category ${id} with ${children.length} subcategories`);
+        
+        // First delete all children recursively
+        await deleteCategoryWithChildren(id);
+        
+        return res.status(200).json({
+          message: 'Category and all its subcategories deleted successfully',
+          deletedCategory: {
+            id: category.id,
+            name: category.name,
+            level: category.level
+          },
+          deletedSubcategories: children.length,
+          totalDeleted: children.length + 1
+        });
+      }
+
+      // Option 2: Move subcategories to parent category (only for level 2+)
+      else if (moveToParent === 'true' && category.parentId) {
+        const parentCategory = await Category.findByPk(category.parentId);
+        if (!parentCategory) {
+          return res.status(400).json({ error: 'Parent category not found' });
+        }
+
+        console.log(`🔄 Moving ${children.length} subcategories to parent ${category.parentId}`);
+        
+        await Category.update(
+          { parentId: category.parentId },
+          { where: { parentId: id } }
+        );
+        
+        await category.destroy();
+        
+        return res.status(200).json({
+          message: 'Category deleted and subcategories moved to parent category',
+          movedSubcategories: children.length,
+          newParent: {
+            id: parentCategory.id,
+            name: parentCategory.name
+          }
+        });
+      }
+
+      // Option 3: Move subcategories to root (only for level 2 categories)
+      else if (moveToParent === 'root' && category.level === 2) {
+        console.log(`🔄 Moving ${children.length} subcategories to root level`);
+        
+        await Category.update(
+          { 
+            parentId: null,
+            level: 1 
+          },
+          { where: { parentId: id } }
+        );
+        
+        await category.destroy();
+        
+        return res.status(200).json({
+          message: 'Category deleted and subcategories moved to root level',
+          movedSubcategories: children.length,
+          promotedToLevel: 1
+        });
+      }
+
+      // Default: Prevent deletion and show options
+      else {
+        return res.status(400).json({ 
+          error: 'Category has subcategories',
+          message: `"${category.name}" contains ${children.length} subcategor${children.length === 1 ? 'y' : 'ies'}. Choose how to handle them:`,
+          category: {
+            id: category.id,
+            name: category.name,
+            level: category.level,
+            subcategoriesCount: children.length
+          },
+          options: {
+            deleteSubcategories: `Add ?deleteSubcategories=true to delete all ${children.length} subcategories`,
+            ...(category.parentId && {
+              moveToParent: `Add ?moveToParent=true to move subcategories to parent category`
+            }),
+            ...(category.level === 2 && {
+              moveToRoot: `Add ?moveToParent=root to move subcategories to root level`
+            })
+          }
+        });
+      }
+    }
+
+    // No children - simple delete
+    console.log(`✅ Deleting category ${id} (no subcategories)`);
+    await category.destroy();
+    
+    res.status(200).json({
+      message: 'Category deleted successfully',
+      deletedCategory: {
+        id: category.id,
+        name: category.name,
+        level: category.level
+      }
+    });
+  } catch (err) {
+    console.error('❌ Error in deleteCategory:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Helper function to recursively delete category with all children
+const deleteCategoryWithChildren = async (categoryId) => {
+  try {
+    const children = await Category.findAll({ where: { parentId: categoryId } });
+    
+    console.log(`🗂️ Recursively deleting ${children.length} children of ${categoryId}`);
+    
+    // Recursively delete all children
+    for (const child of children) {
+      await deleteCategoryWithChildren(child.id);
+    }
+    
+    // Delete the current category
+    await Category.destroy({ where: { id: categoryId } });
+    
+    console.log(`✅ Successfully deleted category ${categoryId}`);
+  } catch (error) {
+    console.error(`❌ Error deleting category ${categoryId}:`, error);
+    throw error;
+  }
+};
+
+// Delete only subcategories of a specific category
+exports.deleteSubcategories = async (req, res) => {
+  try {
+    const { parentId } = req.params;
+
+    console.log(`🗑️ Bulk delete subcategories request for parent ${parentId}`);
+
+    const parentCategory = await Category.findByPk(parentId);
+    if (!parentCategory) {
+      return res.status(404).json({ error: 'Parent category not found' });
+    }
+
+    const subcategories = await Category.findAll({ where: { parentId } });
+    
+    if (subcategories.length === 0) {
+      return res.status(404).json({ error: 'No subcategories found for this category' });
+    }
+
+    console.log(`🚀 Deleting ${subcategories.length} subcategories under "${parentCategory.name}"`);
+
+    // Delete all subcategories recursively
+    let totalDeleted = 0;
+    for (const subcategory of subcategories) {
+      await deleteCategoryWithChildren(subcategory.id);
+      totalDeleted++;
+    }
+
+    res.status(200).json({
+      message: `All subcategories deleted successfully`,
+      deletedCount: totalDeleted,
+      parentCategory: {
+        id: parentCategory.id,
+        name: parentCategory.name,
+        level: parentCategory.level
+      }
+    });
+  } catch (err) {
+    console.error('❌ Error in deleteSubcategories:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Delete a specific subcategory
+exports.deleteSubcategory = async (req, res) => {
+  try {
+    const { parentId, subcategoryId } = req.params;
+
+    console.log(`🗑️ Delete subcategory request: ${subcategoryId} from parent ${parentId}`);
+
+    // Verify the subcategory belongs to the specified parent
+    const subcategory = await Category.findOne({
+      where: { 
+        id: subcategoryId,
+        parentId: parentId 
+      }
+    });
+
+    if (!subcategory) {
+      return res.status(404).json({ 
+        error: 'Subcategory not found or does not belong to the specified parent' 
+      });
+    }
+
+    const parentCategory = await Category.findByPk(parentId);
+    
+    // Check if subcategory has children
+    const children = await Category.findAll({ where: { parentId: subcategoryId } });
+    const hasChildren = children.length > 0;
+
+    if (hasChildren) {
+      return res.status(400).json({
+        error: 'Subcategory has child items',
+        message: `"${subcategory.name}" contains ${children.length} child item${children.length === 1 ? '' : 's'}.`,
+        options: {
+          deleteWithChildren: `Use the main delete endpoint with ?deleteSubcategories=true to delete with children`
+        },
+        subcategory: {
+          id: subcategory.id,
+          name: subcategory.name,
+          level: subcategory.level,
+          childrenCount: children.length
+        }
+      });
+    }
+
+    await subcategory.destroy();
+    
+    res.status(200).json({
+      message: 'Subcategory deleted successfully',
+      deletedSubcategory: {
+        id: subcategory.id,
+        name: subcategory.name,
+        level: subcategory.level
+      },
+      parentCategory: {
+        id: parentCategory.id,
+        name: parentCategory.name
+      }
+    });
+  } catch (err) {
+    console.error('❌ Error in deleteSubcategory:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Safe delete with archive option (optional)
+exports.safeDeleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { permanent } = req.query;
+
+    const category = await Category.findByPk(id);
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    const children = await Category.findAll({ where: { parentId: id } });
+    const hasChildren = children.length > 0;
+
+    // Permanent deletion
+    if (permanent === 'true') {
+      if (hasChildren) {
+        return res.status(400).json({ 
+          error: 'Category has subcategories',
+          message: 'Cannot permanently delete category with subcategories',
+          subcategoriesCount: children.length
+        });
+      }
+
+      await category.destroy();
+
+      return res.status(200).json({
+        message: 'Category permanently deleted',
+        permanentlyDeleted: true
+      });
+    } 
+    // Soft delete (archive) - if you have archive fields
+    else {
+      // If you have archive fields in your model
+      await category.update({ 
+        isActive: false,
+        archivedAt: new Date()
+      });
+
+      return res.status(200).json({
+        message: 'Category archived successfully',
+        archived: true,
+        category: {
+          id: category.id,
+          name: category.name,
+          isActive: false,
+          archivedAt: new Date()
+        }
+      });
+    }
+  } catch (err) {
+    console.error('❌ Error in safeDeleteCategory:', err);
+    res.status(500).json({ error: err.message });
+  }
+};

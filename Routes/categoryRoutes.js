@@ -24,9 +24,7 @@ const {
 // dletion
 // Enhanced deletion routes
 
-router.delete('/api/categories/:parentId/subcategories', deleteSubcategories); // Bulk delete subcategories
-router.delete('/api/categories/:parentId/subcategories/:subcategoryId', deleteSubcategory); // Specific subcategory delete
-router.delete('/api/categories/:id/safe', safeDeleteCategory); // Safe delete with archive
+
 
 // Get all categories with optional filtering
 router.get('/api/categories', getCategories);
@@ -47,6 +45,11 @@ router.get('/api/categories/parent/:parentId/children', getSubcategories);
  * 🛠️ Admin Category Routes — Requires Authentication and Admin Role
  */
 
+
+
+router.delete('/api/admin/categories/:parentId/subcategories', deleteSubcategories); // Bulk delete subcategories
+router.delete('/api/admin/categories/:parentId/subcategories/:subcategoryId', deleteSubcategory); // Specific subcategory delete
+router.delete('/api/admin/categories/:id/safe', safeDeleteCategory); // Safe delete with archive
 // Create new category
 router.post(
   '/api/admin/categories',

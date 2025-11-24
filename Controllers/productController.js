@@ -707,6 +707,33 @@ const getAdminProducts = async (req, res) => {
     }
 };
 
+// Add this to your productController.js
+const debugProductCategories = async (req, res) => {
+    try {
+        const products = await Product.findAll();
+        const categoryCounts = {};
+        
+        products.forEach(product => {
+            const cat1 = product.categoryLevel1 || 'Unknown Level1';
+            categoryCounts[cat1] = (categoryCounts[cat1] || 0) + 1;
+        });
+        
+        console.log('📊 PRODUCT CATEGORY DISTRIBUTION:');
+        Object.entries(categoryCounts).forEach(([category, count]) => {
+            console.log(`   ${category}: ${count} products`);
+        });
+        
+        res.status(200).json({
+            categoryDistribution: categoryCounts,
+            totalProducts: products.length
+        });
+    } catch (error) {
+        console.error('Error debugging categories:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
 // Get single product for admin (includes all data)
 const getAdminProductById = async (req, res) => {
     try {
@@ -976,6 +1003,7 @@ module.exports = {
     updateProduct,
     getProductsByCategory,
     toggleProductStatus,
+    debugProductCategories,
     getAdminProducts,      // Add this
     getAdminProductById ,
     getProductBySlug   // Add this

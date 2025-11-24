@@ -22,7 +22,8 @@ const {
     getAdminSpecialProducts,
     getProductsNotInSpecialCategories,
     getProductBySlug,
-    bulkUpdateSpecialCategories
+    bulkUpdateSpecialCategories ,
+    debugProductCategories
 } = require('../Controllers/productController');
 
 // Import Cloudinary upload configuration
@@ -43,7 +44,8 @@ router.get('/api/products', getProducts);
 router.get('/api/products/featured', getFeaturedProducts); // Changed from '/featured'
 router.get('/api/products/trending', getTrendingProducts); // Changed from '/trending'
 router.get('/api/products/new-arrivals', getNewArrivals); // Changed from '/new-arrivals'
-
+// In your product routes file
+router.get('/api/debug/categories', debugProductCategories);
 router.get('/api/products/category/:level1', getProductsByCategory);
 router.get('/api/products/category/:level1/:level2', getProductsByCategory);
 router.get('/api/products/category/:level1/:level2/:level3', getProductsByCategory);

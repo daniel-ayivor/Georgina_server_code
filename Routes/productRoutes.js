@@ -30,19 +30,31 @@ const { upload } = require('../config/cloudinary');
 /** 
  * 🛒 Public User Routes — No Authentication Required
  */
+// router.get('/api/products', getProducts);
+
+
+/** 
+ * 🛒 Public User Routes — No Authentication Required
+ */
 router.get('/api/products', getProducts);
 
-
-
-
-// Special products routes
-router.get('/featured', getFeaturedProducts);
-router.get('/trending', getTrendingProducts);
-router.get('/new-arrivals', getNewArrivals);
+// Special products routes - MOVE THESE UNDER /api
+router.get('/api/products/featured', getFeaturedProducts); // Changed from '/featured'
+router.get('/api/products/trending', getTrendingProducts); // Changed from '/trending'
+router.get('/api/products/new-arrivals', getNewArrivals); // Changed from '/new-arrivals'
 
 router.get('/api/products/category/:level1', getProductsByCategory);
 router.get('/api/products/category/:level1/:level2', getProductsByCategory);
 router.get('/api/products/category/:level1/:level2/:level3', getProductsByCategory);
+
+// // Special products routes
+// router.get('/featured', getFeaturedProducts);
+// router.get('/trending', getTrendingProducts);
+// router.get('/new-arrivals', getNewArrivals);
+
+// router.get('/api/products/category/:level1', getProductsByCategory);
+// router.get('/api/products/category/:level1/:level2', getProductsByCategory);
+// router.get('/api/products/category/:level1/:level2/:level3', getProductsByCategory);
 
 
 

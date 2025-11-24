@@ -21,6 +21,7 @@ const {
     updateProductSpecialCategories,
     getAdminSpecialProducts,
     getProductsNotInSpecialCategories,
+    getProductBySlug,
     bulkUpdateSpecialCategories
 } = require('../Controllers/productController');
 
@@ -46,15 +47,9 @@ router.get('/api/products/new-arrivals', getNewArrivals); // Changed from '/new-
 router.get('/api/products/category/:level1', getProductsByCategory);
 router.get('/api/products/category/:level1/:level2', getProductsByCategory);
 router.get('/api/products/category/:level1/:level2/:level3', getProductsByCategory);
+router.get('/api/products/slug/:slug', getProductBySlug);
 
-// // Special products routes
-// router.get('/featured', getFeaturedProducts);
-// router.get('/trending', getTrendingProducts);
-// router.get('/new-arrivals', getNewArrivals);
 
-// router.get('/api/products/category/:level1', getProductsByCategory);
-// router.get('/api/products/category/:level1/:level2', getProductsByCategory);
-// router.get('/api/products/category/:level1/:level2/:level3', getProductsByCategory);
 
 
 

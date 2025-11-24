@@ -517,6 +517,63 @@ const deleteProduct = async (req, res) => {
     }
 };
 
+
+// Get Product by Slug
+const getProductBySlug = async (req, res) => {
+    try {
+        const { slug } = req.params;
+
+        console.log('🔍 Fetching product by slug:', slug);
+
+        // Find product by slug
+        const product = await Product.findOne({ 
+            where: { 
+                slug: slug,
+                isActive: true // Only return active products
+            }
+        });
+
+        if (!product) {
+            console.log('❌ Product not found with slug:', slug);
+            return res.status(404).json({ 
+                message: "Product not found",
+                slug: slug
+            });
+        }
+
+        console.log('✅ Product found:', product.name);
+
+        // Get related products from the same category
+        let relatedProducts = [];
+        try {
+            relatedProducts = await Product.findAll({
+                where: {
+                    categoryLevel1: product.categoryLevel1,
+                    id: { [Op.ne]: product.id },
+                    isActive: true
+                },
+                limit: 4,
+                order: [['createdAt', 'DESC']]
+            });
+        } catch (relatedError) {
+            console.error('Error fetching related products:', relatedError);
+            // Continue without related products if there's an error
+        }
+
+        res.status(200).json({ 
+            product,
+            relatedProducts,
+            message: "Product retrieved successfully by slug" 
+        });
+    } catch (error) {
+        console.error("Error retrieving product by slug:", error);
+        res.status(500).json({ 
+            error: "Error retrieving product",
+            message: error.message 
+        });
+    }
+};
+
 // Get Products by Category
 const getProductsByCategory = async (req, res) => {
     try {
@@ -920,5 +977,6 @@ module.exports = {
     getProductsByCategory,
     toggleProductStatus,
     getAdminProducts,      // Add this
-    getAdminProductById    // Add this
+    getAdminProductById ,
+    getProductBySlug   // Add this
 };

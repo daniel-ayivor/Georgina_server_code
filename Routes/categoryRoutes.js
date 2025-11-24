@@ -18,11 +18,7 @@ const {
   
 } = require('../Controllers/categoryController');
 
-/**
- * 🌳 Public Category Routes — No Authentication Required
- */
-// dletion
-// Enhanced deletion routes
+
 
 
 

@@ -31,10 +31,7 @@ const { upload } = require('../config/cloudinary');
  * 🛒 Public User Routes — No Authentication Required
  */
 router.get('/api/products', getProducts);
-router.get('/api/products/category/:level1', getProductsByCategory);
-router.get('/api/products/category/:level1/:level2', getProductsByCategory);
-router.get('/api/products/category/:level1/:level2/:level3', getProductsByCategory);
-router.get('/api/products/:productId', getProduct);
+
 
 
 
@@ -42,23 +39,12 @@ router.get('/api/products/:productId', getProduct);
 router.get('/featured', getFeaturedProducts);
 router.get('/trending', getTrendingProducts);
 router.get('/new-arrivals', getNewArrivals);
-router.patch('/:productId/special-categories', updateProductSpecialCategories);
+
+router.get('/api/products/category/:level1', getProductsByCategory);
+router.get('/api/products/category/:level1/:level2', getProductsByCategory);
+router.get('/api/products/category/:level1/:level2/:level3', getProductsByCategory);
 
 
-
-router.get(
-    '/api/admin/products',
-    authenticate,
-    authorizeRoles('admin'),
-    getAdminProducts
-);
-
-router.get(
-    '/api/admin/products/:productId',
-    authenticate,
-    authorizeRoles('admin'),
-    getAdminProductById
-);
 
 router.post(
     '/api/admin/products',
@@ -67,7 +53,23 @@ router.post(
     upload.single('image'), // Use Cloudinary upload instead of local multer
     createProducts
 );
+router.get(
+    '/api/admin/products',
+    authenticate,
+    authorizeRoles('admin'),
+    getAdminProducts
+);
 
+router.patch('/:productId/special-categories', updateProductSpecialCategories);
+router.get(
+    '/api/admin/products/:productId',
+    authenticate,
+    authorizeRoles('admin'),
+    getAdminProductById
+);
+
+
+router.get('/api/products/:productId', getProduct);
 router.put(
     '/api/admin/products/:productId',
     authenticate,

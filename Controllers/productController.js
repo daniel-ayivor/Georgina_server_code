@@ -239,6 +239,68 @@ const updateProduct = async (req, res) => {
 // Helper function to extract public_id from Cloudinary URL
 
 // Get All Products with advanced filtering
+// const getProducts = async (req, res) => {
+//     try {
+//         const { 
+//             categoryLevel1, 
+//             categoryLevel2, 
+//             categoryLevel3, 
+//             serviceType, 
+//             isActive,
+//             search,
+//             minPrice,
+//             maxPrice,
+//             brand
+//         } = req.query;
+        
+//         let whereClause = {};
+        
+//         // Category filtering
+//         if (categoryLevel1) whereClause.categoryLevel1 = categoryLevel1;
+//         if (categoryLevel2) whereClause.categoryLevel2 = categoryLevel2;
+//         if (categoryLevel3) whereClause.categoryLevel3 = categoryLevel3;
+//         if (serviceType) whereClause.serviceType = serviceType;
+//         if (brand) whereClause.brand = brand;
+        
+//         // Active status filtering
+//         if (isActive !== undefined) {
+//             whereClause.isActive = isActive === 'true';
+//         }
+        
+//         // Price range filtering
+//         if (minPrice || maxPrice) {
+//             whereClause.price = {};
+//             if (minPrice) whereClause.price[Op.gte] = parseFloat(minPrice);
+//             if (maxPrice) whereClause.price[Op.lte] = parseFloat(maxPrice);
+//         }
+        
+//         // Search functionality
+//         if (search) {
+//             whereClause[Op.or] = [
+//                 { name: { [Op.like]: `%${search}%` } },
+//                 { description: { [Op.like]: `%${search}%` } },
+//                 { brand: { [Op.like]: `%${search}%` } }
+//             ];
+//         }
+
+//         const products = await Product.findAll({ 
+//             where: whereClause,
+//             order: [['createdAt', 'DESC']]
+//         });
+        
+//         res.status(200).json({ 
+//             products, 
+//             message: "Products retrieved successfully" 
+//         });
+//     } catch (error) {
+//         console.error("Error retrieving products:", error);
+//         res.status(500).json({ 
+//             error: "Error retrieving products",
+//             message: error.message 
+//         });
+//     }
+// };
+// Get All Products with advanced filtering - EXACT MATCH VERSION
 const getProducts = async (req, res) => {
     try {
         const { 
@@ -255,9 +317,20 @@ const getProducts = async (req, res) => {
         
         let whereClause = {};
         
-        // Category filtering
-        if (categoryLevel1) whereClause.categoryLevel1 = categoryLevel1;
-        if (categoryLevel2) whereClause.categoryLevel2 = categoryLevel2;
+        // Category filtering - FIXED: Use exact match but normalize case
+        if (categoryLevel1) {
+            // Normalize the category name for consistent matching
+            const normalizedCategory = categoryLevel1.trim();
+            whereClause.categoryLevel1 = {
+                [Op.iLike]: normalizedCategory // Case-insensitive exact match
+            };
+        }
+        if (categoryLevel2) {
+            const normalizedCategory = categoryLevel2.trim();
+            whereClause.categoryLevel2 = {
+                [Op.iLike]: normalizedCategory // Case-insensitive exact match
+            };
+        }
         if (categoryLevel3) whereClause.categoryLevel3 = categoryLevel3;
         if (serviceType) whereClause.serviceType = serviceType;
         if (brand) whereClause.brand = brand;
@@ -277,16 +350,30 @@ const getProducts = async (req, res) => {
         // Search functionality
         if (search) {
             whereClause[Op.or] = [
-                { name: { [Op.like]: `%${search}%` } },
-                { description: { [Op.like]: `%${search}%` } },
-                { brand: { [Op.like]: `%${search}%` } }
+                { name: { [Op.iLike]: `%${search}%` } },
+                { description: { [Op.iLike]: `%${search}%` } },
+                { brand: { [Op.iLike]: `%${search}%` } }
             ];
         }
+
+        console.log('🔍 Products Query - Exact Match:', { 
+            categoryLevel1, 
+            categoryLevel2, 
+            whereClause 
+        });
 
         const products = await Product.findAll({ 
             where: whereClause,
             order: [['createdAt', 'DESC']]
         });
+
+        // Debug: Check what categories are actually in the results
+        const categoryCounts = {};
+        products.forEach(product => {
+            const cat = product.categoryLevel1 || 'Unknown';
+            categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+        });
+        console.log('📊 Products by category:', categoryCounts);
         
         res.status(200).json({ 
             products, 
@@ -300,7 +387,6 @@ const getProducts = async (req, res) => {
         });
     }
 };
-
 
 // Get Featured Products
 const getFeaturedProducts = async (req, res) => {

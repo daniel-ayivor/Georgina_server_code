@@ -36,19 +36,51 @@ const app = express();
 // IMPORTANT: Apply express.raw() BEFORE express.json() for webhook route
 app.use('/api/webhook', express.raw({ type: 'application/json' }));
 app.use(bodyParser.json());
+// app.use(cors({
+//   origin: [
+//     'https://georgina-services-limited-dashboard.vercel.app',
+//     'https://snappy-cart-carousel.vercel.app',
+//     'https://shop-clean-sparkle.vercel.app',
+//     'http://localhost:8080',
+//     'http://localhost:8082',
+//     'http://localhost:8083',
+//     'http://localhost:8081',
+//     'https://georgina-server-code.onrender.com'
+//   ],
+//   credentials: true
+// }));
+
 app.use(cors({
-  origin: [
-    'https://georgina-services-limited-dashboard.vercel.app',
-    'https://snappy-cart-carousel.vercel.app',
-    'https://shop-clean-sparkle.vercel.app',
-    'http://localhost:8080',
-    'http://localhost:8082',
-    'http://localhost:8083',
-    'http://localhost:8081',
-    'https://georgina-server-code.onrender.com'
-  ],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+
+    // Allow all localhost variants
+    if (/^http:\/\/localhost(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    // Allow 127.0.0.1 as well
+    if (/^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    // Add any other trusted domains
+    const allowedOrigins = [
+      'https://georgina-services-limited-dashboard.vercel.app',
+      'https://snappy-cart-carousel.vercel.app',
+      'https://shop-clean-sparkle.vercel.app',
+      'https://georgina-server-code.onrender.com'
+    ];
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
+
 app.use(express.json());
 
 

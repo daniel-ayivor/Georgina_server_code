@@ -23,7 +23,7 @@ router.post("/api/auth/user/register", registerUser);
 router.post("/api/auth/user/login", loginUser);
 // Admin change password routes
 router.post('/admin/change-password', adminChangePassword);
-router.post('/admin/change-own-password', adminChangeOwnPassword);
+router.post('/auth/admin/change-own-password', adminChangeOwnPassword);
 
 // Dashboard admin/staff routes
 router.post("/api/auth/admin/register", registerAdmin);

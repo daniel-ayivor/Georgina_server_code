@@ -33,6 +33,8 @@ const { QueryTypes } = require('sequelize');
 
 config();
 const app = express();
+// IMPORTANT: Apply express.raw() BEFORE express.json() for webhook route
+app.use('/api/webhook', express.raw({ type: 'application/json' }));
 app.use(bodyParser.json());
 app.use(cors({
   origin: [

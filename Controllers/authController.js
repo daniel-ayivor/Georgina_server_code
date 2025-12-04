@@ -561,6 +561,230 @@ const verifyToken = async (req, res) => {
 //     res.status(500).json({ message: "Server error" });
 //   }
 // };
+// Admin Change Password (Admin changes password for any user)
+const adminChangePassword = async (req, res) => {
+  try {
+    const { userId, newPassword, confirmPassword } = req.body;
+    
+    // Check if the requester is an admin
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false,
+        message: "Access token is required" 
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Verify the requester is an admin
+    const requester = await User.findByPk(decoded.userId);
+    if (!requester || requester.role !== 'admin') {
+      return res.status(403).json({ 
+        success: false,
+        message: "Access denied. Admin privileges required." 
+      });
+    }
+
+    // Validate inputs
+    if (!userId || !newPassword || !confirmPassword) {
+      return res.status(400).json({ 
+        success: false,
+        message: "User ID, new password, and confirm password are required" 
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Passwords do not match" 
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Password must be at least 6 characters long" 
+      });
+    }
+
+    // Find the user whose password needs to be changed
+    const userToUpdate = await User.findByPk(userId);
+    if (!userToUpdate) {
+      return res.status(404).json({ 
+        success: false,
+        message: "User not found" 
+      });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the user's password
+    await User.update(
+      { password: hashedPassword },
+      { where: { id: userId } }
+    );
+
+    // Optionally, send email notification to the user
+    try {
+      const transporter = nodemailer.createTransport({
+        service: "Gmail",
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: userToUpdate.email,
+        subject: "Your Password Has Been Updated",
+        html: `
+          <p>Hello ${userToUpdate.name},</p>
+          <p>Your password has been updated by an administrator.</p>
+          <p>If you did not request this change, please contact our support team immediately.</p>
+          <p>Best regards,<br>The Admin Team</p>
+        `,
+      };
+
+      await transporter.sendMail(mailOptions);
+    } catch (emailError) {
+      console.error("Error sending notification email:", emailError);
+      // Don't fail the request if email fails
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+      data: {
+        userId: userToUpdate.id,
+        email: userToUpdate.email,
+        name: userToUpdate.name,
+        updatedBy: requester.id,
+        updatedByEmail: requester.email
+      }
+    });
+
+  } catch (error) {
+    console.error("Error in admin change password:", error);
+    
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ 
+        success: false,
+        message: "Invalid token" 
+      });
+    }
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        success: false,
+        message: "Token has expired" 
+      });
+    }
+
+    res.status(500).json({ 
+      success: false,
+      message: "Server error during password change" 
+    });
+  }
+};
+
+// Admin Change Own Password (Admin changes their own password)
+const adminChangeOwnPassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    
+    // Get admin from token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false,
+        message: "Access token is required" 
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Find the admin
+    const admin = await User.findByPk(decoded.userId);
+    if (!admin || admin.role !== 'admin') {
+      return res.status(403).json({ 
+        success: false,
+        message: "Access denied. Admin privileges required." 
+      });
+    }
+
+    // Validate inputs
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Current password, new password, and confirm password are required" 
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ 
+        success: false,
+        message: "New passwords do not match" 
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        success: false,
+        message: "New password must be at least 6 characters long" 
+      });
+    }
+
+    // Verify current password
+    const validPassword = await bcrypt.compare(currentPassword, admin.password);
+    if (!validPassword) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Current password is incorrect" 
+      });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the admin's password
+    await User.update(
+      { password: hashedPassword },
+      { where: { id: admin.id } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Your password has been updated successfully"
+    });
+
+  } catch (error) {
+    console.error("Error in admin change own password:", error);
+    
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ 
+        success: false,
+        message: "Invalid token" 
+      });
+    }
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        success: false,
+        message: "Token has expired" 
+      });
+    }
+
+    res.status(500).json({ 
+      success: false,
+      message: "Server error during password change" 
+    });
+  }
+};
 
 module.exports = {
   registerUser,
@@ -569,6 +793,8 @@ module.exports = {
   loginAdmin,
   userInfo,
   forgotPassword,
+  adminChangePassword ,
+  adminChangeOwnPassword,
   verifyToken,
   resetPassword,
 };

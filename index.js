@@ -69,7 +69,11 @@ app.use(cors({
       'https://georgina-services-limited-dashboard.vercel.app',
       'https://snappy-cart-carousel.vercel.app',
       'https://shop-clean-sparkle.vercel.app',
-      'https://georgina-server-code.onrender.com'
+      'https://georgina-server-code.onrender.com',
+      'http://localhost:8080',
+    'http://localhost:8082',
+    'http://localhost:8083',
+    'http://localhost:8081',
     ];
 
     if (allowedOrigins.includes(origin)) {

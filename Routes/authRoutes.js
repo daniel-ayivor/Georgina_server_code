@@ -28,7 +28,7 @@ router.post('/auth/admin/change-own-password', adminChangeOwnPassword);
 // Dashboard admin/staff routes
 router.post("/api/auth/admin/register", registerAdmin);
 router.post("/api/auth/admin/login", loginAdmin);
-
+// mail password reset routes
 
 // customer deletion route
 

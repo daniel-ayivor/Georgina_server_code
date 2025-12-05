@@ -65,16 +65,18 @@ app.use(cors({
     }
 
     // Add any other trusted domains
-    const allowedOrigins = [
-      'https://georgina-services-limited-dashboard.vercel.app',
-      'https://snappy-cart-carousel.vercel.app',
-      'https://shop-clean-sparkle.vercel.app',
-      'https://georgina-server-code.onrender.com',
-      'http://localhost:8080',
-    'http://localhost:8082',
-    'http://localhost:8083',
-    'http://localhost:8081',
-    ];
+const allowedOrigins = [
+  'https://georgina-services-limited-dashboard.vercel.app', // dashboard frontend
+  'https://snappy-cart-carousel.vercel.app',
+  'https://shop-clean-sparkle.vercel.app',
+  'https://georgina-server-code.onrender.com', // Render server
+  'https://georgina-services-limited-5bywlye7y-ayivor-daniel-s-projects.vercel.app', // Vercel preview
+  'https://georgina-services-limited.vercel.app', // primary Vercel domain
+  'http://localhost:8080',
+  'http://localhost:8081',
+  'http://localhost:8082',
+  'http://localhost:8083',
+];
 
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);

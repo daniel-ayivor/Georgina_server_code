@@ -40,6 +40,7 @@ router.post("/api/payment", PaymentIntent); // Legacy redirect checkout
 router.post("/api/create-checkout-session", createEmbeddedCheckout); // New embedded checkout
 router.get("/api/session-status", getSessionStatus); // Check payment status
 router.post("/api/confirm-payment", confirmPayment);
+// cchanges key
 
 // Webhook route - This will use raw body parser from server.js
 router.post("/api/webhook", stripeWebhook);

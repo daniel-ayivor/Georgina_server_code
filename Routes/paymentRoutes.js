@@ -55,11 +55,13 @@ const {
     createEmbeddedCheckout,
     getSessionStatus,
     confirmPayment, 
-    stripeWebhook 
+    stripeWebhook ,
+    PaymentIntent
 } = require("../Controllers/paymentController");
 
 // Embedded checkout route (replaces old /api/payment)
-router.post("/api/payment", createEmbeddedCheckout);
+router.post("/api/payment", PaymentIntent);
+router.post("/api/payment/checkout", createEmbeddedCheckout);
 
 // Other routes
 router.get("/api/session-status", getSessionStatus);

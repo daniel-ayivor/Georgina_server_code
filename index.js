@@ -13,6 +13,7 @@ const Order = require("./Models/orderModel");
 const Category = require("./Models/categoryModel");
 const OrderItem = require("./Models/orderItemModel");
 const contactRoute = require("./Routes/contactRoute");
+const Index = require('./Models/index');
 const authRoute = require("./Routes/authRoutes");
 const userRoute = require("./Routes/userRoutes");
 const productRoute = require("./Routes/productRoutes");
@@ -25,6 +26,7 @@ const userOrderRoutes = require('./Routes/userOrderRoutes');
 const adminOrderRoutes = require('./Routes/adminOrderRoutes');
 const adminorderItemsRoutes = require('./Routes/orderItemsRoute');
 const specialProductRoute = require('./Routes/specialProductRoute');
+const wishlistRoute = require('./Routes/wishlistRoute');
 
 // Import Cloudinary configuration
 const { cloudinary } = require('./config/cloudinary');
@@ -36,19 +38,7 @@ const app = express();
 // IMPORTANT: Apply express.raw() BEFORE express.json() for webhook route
 app.use('/api/webhook', express.raw({ type: 'application/json' }));
 app.use(bodyParser.json());
-// app.use(cors({
-//   origin: [
-//     'https://georgina-services-limited-dashboard.vercel.app',
-//     'https://snappy-cart-carousel.vercel.app',
-//     'https://shop-clean-sparkle.vercel.app',
-//     'http://localhost:8080',
-//     'http://localhost:8082',
-//     'http://localhost:8083',
-//     'http://localhost:8081',
-//     'https://georgina-server-code.onrender.com'
-//   ],
-//   credentials: true
-// }));
+
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -376,19 +366,7 @@ async function seedInitialData() {
   }
 }
 
-// Set up associations
-if (User.associate) {
-  User.associate({ Order, OrderItem, Product });
-}
-if (Product.associate) {
-  Product.associate({ Order, OrderItem, User });
-}
-if (Order.associate) {
-  Order.associate({ OrderItem, User, Product });
-}
-if (OrderItem.associate) {
-  OrderItem.associate({ Order, Product });
-}
+// Associations are set up in Models/index.js and called automatically
 
 // Mount routes
 app.use(authRoute);
@@ -402,6 +380,7 @@ app.use(specialProductRoute)
 app.use(productRoute);
 app.use(categoryRoute); 
 app.use(adminorderItemsRoutes);
+app.use(wishlistRoute);
 app.use(notificationRoute);
 app.use(userOrderRoutes);
 app.use(adminOrderRoutes);

@@ -40,17 +40,4 @@ const Order = sequelize.define('Order', {
   timestamps: true
 });
 
-// Define associations separately
-Order.associate = function(models) {
-  Order.belongsTo(models.User, {
-    foreignKey: 'userId',
-    as: 'user' // This is the alias
-  });
-  
-  Order.hasMany(models.OrderItem, {
-    foreignKey: 'orderId',
-    as: 'items' // This is the alias
-  });
-};
-
 module.exports = Order;

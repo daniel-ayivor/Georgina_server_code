@@ -8,5 +8,6 @@ router.post("/api/orders",debugAuth, authenticate, userOrderController.createOrd
 router.get("/api/orders/my-orders", authenticate, userOrderController.getMyOrders);
 router.get("/api/orders/:id", authenticate, userOrderController.getOrderById);
 router.put("/api/orders/:id/cancel", authenticate, userOrderController.cancelOrder);
+router.delete("/api/orders/:id", authenticate, userOrderController.deleteOrder);
 
 module.exports = router;

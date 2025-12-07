@@ -1,11 +1,24 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../Database/database');
 
+// Function to generate unique order number
+const generateOrderNumber = () => {
+  const timestamp = Date.now().toString(36).toUpperCase(); // Convert timestamp to base36
+  const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase(); // Random 6 chars
+  return `ORD-${timestamp}-${randomPart}`;
+};
+
 const Order = sequelize.define('Order', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    autoIncrement: true // Add autoIncrement
+    autoIncrement: true
+  },
+  orderNumber: {
+    type: DataTypes.STRING,
+    unique: true,
+    allowNull: false,
+    defaultValue: generateOrderNumber
   },
   userId: {
     type: DataTypes.INTEGER,

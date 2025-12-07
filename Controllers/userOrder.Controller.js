@@ -115,17 +115,17 @@ getMyOrders: async (req, res) => {
     });
   }
 },
-  // Get specific order by ID
+  // Get specific order by orderNumber
   getOrderById: async (req, res) => {
     try {
       const userId = req.user.id;
-      const orderId = req.params.id;
+      const orderNumber = req.params.id; // Now expecting orderNumber instead of id
 
-      console.log('🔐 Fetching order:', orderId, 'for user:', userId);
+      console.log('🔐 Fetching order:', orderNumber, 'for user:', userId);
 
       const order = await Order.findOne({
         where: { 
-          id: orderId,
+          orderNumber,
           userId // Ensure the order belongs to the user
         },
         include: [
@@ -174,13 +174,13 @@ getMyOrders: async (req, res) => {
   cancelOrder: async (req, res) => {
     try {
       const userId = req.user.id;
-      const orderId = req.params.id;
+      const orderNumber = req.params.id; // Now expecting orderNumber
 
-      console.log('🔐 Cancelling order:', orderId, 'for user:', userId);
+      console.log('🔐 Cancelling order:', orderNumber, 'for user:', userId);
 
       const order = await Order.findOne({
         where: { 
-          id: orderId,
+          orderNumber,
           userId // Ensure the order belongs to the user
         }
       });
@@ -214,6 +214,58 @@ getMyOrders: async (req, res) => {
       res.status(500).json({
         success: false,
         message: "Failed to cancel order"
+      });
+    }
+  },
+
+  // Delete order (only pending orders can be deleted)
+  deleteOrder: async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const orderNumber = req.params.id;
+
+      console.log('🔐 Deleting order:', orderNumber, 'for user:', userId);
+
+      const order = await Order.findOne({
+        where: { 
+          orderNumber,
+          userId // Ensure the order belongs to the user
+        }
+      });
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found"
+        });
+      }
+
+      // Only allow deletion of pending or cancelled orders
+      if (!['pending', 'cancelled'].includes(order.status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Order cannot be deleted. Only pending or cancelled orders can be deleted. Current status: ${order.status}`
+        });
+      }
+
+      // Delete associated order items first
+      await OrderItem.destroy({
+        where: { orderId: order.id }
+      });
+
+      // Delete the order
+      await order.destroy();
+
+      res.json({
+        success: true,
+        message: "Order deleted successfully"
+      });
+
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to delete order"
       });
     }
   }

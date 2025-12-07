@@ -3,6 +3,9 @@ const OrderItem = require('../Models/orderItemModel');
 const Product = require('../Models/productModel');
 const User = require('../Models/userModel');
 
+console.log('🔍 OrderItem associations:', Object.keys(OrderItem.associations || {}));
+console.log('🔍 Order associations:', Object.keys(Order.associations || {}));
+console.log('🔍 Product associations:', Object.keys(Product.associations || {}));
 
 
 const userOrderController = {
@@ -87,11 +90,13 @@ getMyOrders: async (req, res) => {
         {
           model: OrderItem,
           as: 'items',
+          required: false, // Use LEFT JOIN to include orders even if no items
           include: [
             {
               model: Product,
               as: 'product',
-              attributes: ['id', 'name', 'price', 'images'] // ← CHANGED 'image' to 'images'
+              required: false,
+              attributes: ['id', 'name', 'price', 'images']
             }
           ]
         }
@@ -100,6 +105,11 @@ getMyOrders: async (req, res) => {
     });
 
     console.log('✅ Found orders:', orders.length);
+    
+    // Debug: log the first order structure
+    if (orders.length > 0) {
+      console.log('📦 First order structure:', JSON.stringify(orders[0], null, 2));
+    }
 
     res.json({
       success: true,
@@ -108,10 +118,12 @@ getMyOrders: async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching user orders:', error);
+    console.error('❌ Error fetching user orders:', error.message);
+    console.error('Stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch orders"
+      message: "Failed to fetch orders",
+      error: error.message
     });
   }
 },

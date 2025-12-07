@@ -29,7 +29,7 @@ const setupAssociations = () => {
     as: 'orderItems'
   });
 
-  // Order associations
+  // Order associations - CRITICAL FOR ORDER QUERIES
   Order.belongsTo(User, {
     foreignKey: 'userId',
     as: 'user'
@@ -37,7 +37,7 @@ const setupAssociations = () => {
 
   Order.hasMany(OrderItem, {
     foreignKey: 'orderId',
-    as: 'items'
+    as: 'items'  // This alias MUST match the include in controller
   });
 
   // Wishlist associations
@@ -51,7 +51,7 @@ const setupAssociations = () => {
     as: 'product'
   });
 
-  // OrderItem associations
+  // OrderItem associations - CRITICAL FOR ITEM/PRODUCT QUERIES
   OrderItem.belongsTo(Order, {
     foreignKey: 'orderId',
     as: 'order'
@@ -59,8 +59,12 @@ const setupAssociations = () => {
   
   OrderItem.belongsTo(Product, {
     foreignKey: 'productId',
-    as: 'product'
+    as: 'product'  // This alias MUST match the include in controller
   });
+
+  // Verify associations are set up
+  console.log('✅ Order associations:', Object.keys(Order.associations || {}));
+  console.log('✅ OrderItem associations:', Object.keys(OrderItem.associations || {}));
 };
 
 // SET UP ASSOCIATIONS IMMEDIATELY

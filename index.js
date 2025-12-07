@@ -6,14 +6,21 @@ const bodyParser = require('body-parser');
 const { config } = require('dotenv');
 const path = require('path');
 const sequelize = require('./Database/database');
+
+// Import Models/index first to set up all associations before other requires
+const Index = require('./Models/index');
+
+// Now require individual models after associations are set up
 const Product = require('./Models/productModel');
 const User = require("./Models/userModel");
-const chatbotRoutes = require('./Routes/chatRoute');
 const Order = require("./Models/orderModel");
 const Category = require("./Models/categoryModel");
 const OrderItem = require("./Models/orderItemModel");
+const Wishlist = require("./Models/wishlist");
+
+// Import routes
+const chatbotRoutes = require('./Routes/chatRoute');
 const contactRoute = require("./Routes/contactRoute");
-const Index = require('./Models/index');
 const authRoute = require("./Routes/authRoutes");
 const userRoute = require("./Routes/userRoutes");
 const productRoute = require("./Routes/productRoutes");

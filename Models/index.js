@@ -8,14 +8,14 @@ const Order = require('./orderModel');
 // Set up associations
 const setupAssociations = () => {
   // User associations
+  User.hasMany(Order, {
+    foreignKey: 'userId',
+    as: 'orders'
+  });
+
   User.hasMany(Wishlist, {
     foreignKey: 'userId',
     as: 'wishlistItems'
-  });
-  
-  User.hasMany(OrderItem, {
-    foreignKey: 'userId',
-    as: 'orderItems'
   });
 
   // Product associations
@@ -27,6 +27,17 @@ const setupAssociations = () => {
   Product.hasMany(OrderItem, {
     foreignKey: 'productId',
     as: 'orderItems'
+  });
+
+  // Order associations
+  Order.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user'
+  });
+
+  Order.hasMany(OrderItem, {
+    foreignKey: 'orderId',
+    as: 'items'
   });
 
   // Wishlist associations

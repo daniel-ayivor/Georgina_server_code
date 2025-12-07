@@ -17,7 +17,7 @@ const Order = sequelize.define('Order', {
   orderNumber: {
     type: DataTypes.STRING,
     unique: true,
-    allowNull: false,
+    allowNull: true, // Allow null for existing rows during migration
     defaultValue: generateOrderNumber
   },
   userId: {
@@ -50,7 +50,14 @@ const Order = sequelize.define('Order', {
   }
 }, {
   tableName: 'orders',
-  timestamps: true
+  timestamps: true,
+  hooks: {
+    beforeCreate: (order) => {
+      if (!order.orderNumber) {
+        order.orderNumber = generateOrderNumber();
+      }
+    }
+  }
 });
 
 module.exports = Order;

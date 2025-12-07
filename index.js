@@ -86,15 +86,63 @@ async function syncDatabase() {
     
     // Use { alter: true } for safe schema updates in production
     await sequelize.sync({ alter: true });
-     
     
     console.log('Database synchronized successfully');
+    
+    // Backfill existing orders with orderNumbers
+    await backfillOrderNumbers();
     
     // Seed initial data
     await seedInitialData();
     
   } catch (error) {
     console.error('❌ Error syncing database:', error);
+  }
+}
+
+// Helper function to generate unique order number
+const generateOrderNumber = () => {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `ORD-${timestamp}-${randomPart}`;
+};
+
+// Backfill existing orders with orderNumbers
+async function backfillOrderNumbers() {
+  try {
+    // Find all orders with null orderNumber
+    const ordersWithoutNumber = await Order.findAll({
+      where: { orderNumber: null },
+      raw: true
+    });
+
+    if (ordersWithoutNumber.length > 0) {
+      console.log(`🔄 Backfilling ${ordersWithoutNumber.length} orders with orderNumbers...`);
+      
+      for (const order of ordersWithoutNumber) {
+        let orderNumber;
+        let isUnique = false;
+        
+        // Generate unique orderNumber (in case of collision)
+        while (!isUnique) {
+          orderNumber = generateOrderNumber();
+          const existing = await Order.findOne({ where: { orderNumber } });
+          if (!existing) {
+            isUnique = true;
+          }
+        }
+        
+        await Order.update(
+          { orderNumber },
+          { where: { id: order.id } }
+        );
+      }
+      
+      console.log('✅ Backfill completed successfully');
+    }
+  } catch (error) {
+    console.error('⚠️ Error backfilling orderNumbers:', error.message);
+    // Don't throw - this shouldn't block server startup
   }
 }
 

@@ -33,6 +33,7 @@ const userOrderRoutes = require('./Routes/userOrderRoutes');
 const adminOrderRoutes = require('./Routes/adminOrderRoutes');
 const adminorderItemsRoutes = require('./Routes/orderItemsRoute');
 const specialProductRoute = require('./Routes/specialProductRoute');
+const reviewRoute = require('./Routes/reviewRoutes');
 const wishlistRoute = require('./Routes/wishlistRoute');
 
 // Import Cloudinary configuration
@@ -433,6 +434,7 @@ app.use(paymentRoute);
 app.use(serviceRoute);
 app.use(specialProductRoute)
 app.use(productRoute);
+app.use(reviewRoute);
 app.use(categoryRoute); 
 app.use(adminorderItemsRoutes);
 app.use(wishlistRoute);

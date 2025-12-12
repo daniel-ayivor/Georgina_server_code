@@ -15,12 +15,16 @@ const {
   userInfo,
 adminChangeOwnPassword,
 adminChangePassword,
+  socialLoginGoogle,
+  socialLoginFacebook,
   
 } = require("../Controllers/authController");
 
 // E-commerce user routes
 router.post("/api/auth/user/register", registerUser);
 router.post("/api/auth/user/login", loginUser);
+router.post("/api/auth/google", socialLoginGoogle);
+router.post("/api/auth/facebook", socialLoginFacebook);
 // Admin change password routes
 router.post('/admin/change-password', adminChangePassword);
 router.post('/auth/admin/change-own-password', adminChangeOwnPassword);

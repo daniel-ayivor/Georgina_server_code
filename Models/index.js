@@ -4,6 +4,7 @@ const User = require('./userModel');
 const Wishlist = require('./wishlist');
 const OrderItem = require('./orderItemModel');
 const Order = require('./orderModel');
+const Review = require('./reviewModel'); // Add Review model
 
 // Set up associations
 const setupAssociations = () => {
@@ -18,6 +19,11 @@ const setupAssociations = () => {
     as: 'wishlistItems'
   });
 
+  User.hasMany(Review, {
+    foreignKey: 'userId',
+    as: 'reviews'
+  });
+
   // Product associations
   Product.hasMany(Wishlist, {
     foreignKey: 'productId',
@@ -27,6 +33,12 @@ const setupAssociations = () => {
   Product.hasMany(OrderItem, {
     foreignKey: 'productId',
     as: 'orderItems'
+  });
+
+  Product.hasMany(Review, {
+    foreignKey: 'productId',
+    as: 'reviews', // Changed from 'Reviews' to 'reviews' for consistency
+    onDelete: 'CASCADE'
   });
 
   // Order associations - CRITICAL FOR ORDER QUERIES
@@ -62,9 +74,25 @@ const setupAssociations = () => {
     as: 'product'  // This alias MUST match the include in controller
   });
 
+  // Review associations
+  Review.belongsTo(Product, {
+    foreignKey: 'productId',
+    as: 'product'
+  });
+
+  Review.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user'
+  });
+
   // Verify associations are set up
+  console.log('✅ All associations are set up:');
+  console.log('✅ Product associations:', Object.keys(Product.associations || {}));
+  console.log('✅ User associations:', Object.keys(User.associations || {}));
   console.log('✅ Order associations:', Object.keys(Order.associations || {}));
   console.log('✅ OrderItem associations:', Object.keys(OrderItem.associations || {}));
+  console.log('✅ Review associations:', Object.keys(Review.associations || {}));
+  console.log('✅ Wishlist associations:', Object.keys(Wishlist.associations || {}));
 };
 
 // SET UP ASSOCIATIONS IMMEDIATELY
@@ -76,5 +104,6 @@ module.exports = {
   Wishlist,
   OrderItem,
   Order,
+  Review, 
   setupAssociations
 };

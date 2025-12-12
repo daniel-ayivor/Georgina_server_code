@@ -56,11 +56,26 @@ const Product = sequelize.define('Product', {
     defaultValue: 0,
     validate: { min: 0 },
   },
+  
   images: {
     type: DataTypes.JSON,
     allowNull: true,
     defaultValue: [],
   },
+  // Add these fields to your Product model
+averageRating: {
+  type: DataTypes.DECIMAL(2, 1),
+  defaultValue: 0,
+  validate: {
+    min: 0,
+    max: 5
+  }
+},
+totalReviews: {
+  type: DataTypes.INTEGER,
+  defaultValue: 0,
+  validate: { min: 0 }
+},
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,

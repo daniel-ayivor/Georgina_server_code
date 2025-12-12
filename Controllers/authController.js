@@ -6,9 +6,36 @@ const userSchema = require("../Schemas/userSchema");
 const bcrypt = require('bcryptjs');
 const Ajv = require("ajv");
 const nodemailer = require("nodemailer");
+const axios = require("axios");
+const { OAuth2Client } = require("google-auth-library");
 
 const ajv = new Ajv();
 const validate = ajv.compile(userSchema);
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Reusable mail transporter builder with SMTP override + Gmail fallback
+const buildMailTransporter = () => {
+  if (process.env.SMTP_HOST) {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || "587", 10),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
+
+  // Fallback to Gmail (requires EMAIL_USER + EMAIL_PASS app password)
+  return nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+};
 
 // Register User (for e-commerce users)
 const registerUser = async (req, res) => {
@@ -217,6 +244,144 @@ const loginAdmin = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+// Google OAuth login/register
+const socialLoginGoogle = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ message: "idToken is required" });
+    }
+
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      return res.status(500).json({ message: "Google OAuth is not configured" });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      return res.status(400).json({ message: "Unable to verify Google account" });
+    }
+
+    const email = payload.email.toLowerCase();
+    const name = payload.name || payload.given_name || payload.family_name || email;
+
+    let user = await User.findOne({ where: { email } });
+    if (!user) {
+      user = await User.create({
+        name,
+        email,
+        password: null, // passwordless OAuth user
+        role: "user",
+      });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "8h" }
+    );
+
+    res.status(200).json({
+      token,
+      provider: "google",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Error with Google OAuth", error);
+    res.status(500).json({ message: "Google authentication failed" });
+  }
+};
+
+// Facebook OAuth login/register
+const socialLoginFacebook = async (req, res) => {
+  try {
+    const { accessToken } = req.body;
+
+    if (!accessToken) {
+      return res.status(400).json({ message: "accessToken is required" });
+    }
+
+    if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET) {
+      return res.status(500).json({ message: "Facebook OAuth is not configured" });
+    }
+
+    const appAccessToken = `${process.env.FACEBOOK_APP_ID}|${process.env.FACEBOOK_APP_SECRET}`;
+
+    // Validate the access token
+    const debugResponse = await axios.get(
+      "https://graph.facebook.com/debug_token",
+      {
+        params: {
+          input_token: accessToken,
+          access_token: appAccessToken,
+        },
+      }
+    );
+
+    const tokenData = debugResponse.data?.data;
+    if (!tokenData?.is_valid || tokenData.app_id !== process.env.FACEBOOK_APP_ID) {
+      return res.status(401).json({ message: "Invalid Facebook token" });
+    }
+
+    // Fetch user profile
+    const profileResponse = await axios.get(
+      "https://graph.facebook.com/me",
+      {
+        params: {
+          access_token: accessToken,
+          fields: "id,name,email",
+        },
+      }
+    );
+
+    const { id, name, email: fbEmail } = profileResponse.data || {};
+    const email = (fbEmail || `fb-${id}@facebook.com`).toLowerCase();
+    const displayName = name || "Facebook User";
+
+    let user = await User.findOne({ where: { email } });
+    if (!user) {
+      user = await User.create({
+        name: displayName,
+        email,
+        password: null,
+        role: "user",
+      });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "8h" }
+    );
+
+    res.status(200).json({
+      token,
+      provider: "facebook",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      facebookId: id,
+      rawEmail: fbEmail || null
+    });
+  } catch (error) {
+    console.error("Error with Facebook OAuth", error.response?.data || error);
+    res.status(500).json({ message: "Facebook authentication failed" });
+  }
+};
 // Forgot Password
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
@@ -235,15 +400,12 @@ const forgotPassword = async (req, res) => {
 );
 
     // Send Reset Email
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    const transporter = buildMailTransporter();
+    // Optional: fail fast if transporter misconfigured
+    await transporter.verify();
 
-    const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+    const resetLink = `${clientUrl}/reset-password?token=${resetToken}`;
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -797,4 +959,6 @@ module.exports = {
   adminChangeOwnPassword,
   verifyToken,
   resetPassword,
+  socialLoginGoogle,
+  socialLoginFacebook,
 };

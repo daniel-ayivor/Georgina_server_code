@@ -1,3 +1,91 @@
+// Initiate payment for booking (new flow)
+const stripe = require('stripe')(process.env.STRIPE_SECRET);
+const User = require('../Models/userModel');
+const Booking = require('../Models/booking');
+
+// Initiate payment for booking
+const initiateBookingPayment = async (req, res) => {
+  try {
+    const {
+      customerName,
+      customerEmail,
+      customerPhone,
+      serviceType,
+      selectedFeatures,
+      address,
+      date,
+      time,
+      duration,
+      price,
+      specialInstructions,
+      userId,
+      countryCode
+    } = req.body;
+
+    // Validate required fields
+    if (!userId || !price || !customerEmail) {
+      return res.status(400).json({ success: false, message: 'Missing required fields for payment.' });
+    }
+
+    // Find user
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    // Determine currency
+    let currency = 'usd';
+    if (countryCode === 'GB') currency = 'gbp';
+    else if (countryCode === 'GH') currency = 'ghs';
+    else if (countryCode === 'NG') currency = 'ngn';
+
+    // Create PaymentIntent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(Number(price) * 100),
+      currency,
+      metadata: {
+        userId: userId.toString(),
+        customerName,
+        serviceType,
+        date,
+        time
+      },
+      receipt_email: customerEmail,
+      description: `Service booking: ${serviceType}`
+    });
+
+    // Create a pending booking record with paymentIntentId
+    const featuresArray = Array.isArray(selectedFeatures) ? selectedFeatures : [];
+    const pendingBooking = await Booking.create({
+      customerName,
+      customerEmail,
+      customerPhone,
+      serviceType,
+      selectedFeatures: featuresArray,
+      address,
+      date,
+      time,
+      duration,
+      price,
+      specialInstructions,
+      userId,
+      status: 'pending',
+      paymentIntentId: paymentIntent.id
+    });
+
+    // Return client secret and booking reference to frontend
+    return res.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      bookingReference: pendingBooking.bookingReference
+    });
+  } catch (error) {
+    console.error('Error initiating booking payment:', error);
+    return res.status(500).json({ success: false, message: 'Failed to initiate payment', error: error.message });
+  }
+};
+
+module.exports.initiateBookingPayment = initiateBookingPayment;
 
 // const Booking = require("../Models/booking");
 // // Import the User model at the top of your booking controller file

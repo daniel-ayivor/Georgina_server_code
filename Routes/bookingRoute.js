@@ -21,6 +21,11 @@ router.post('/test-email-system', testEmailSystem);
 // =============================================
 // PUBLIC ROUTES (No authentication required)
 // =============================================
+// Initiate payment for booking (new flow)
+const { initiateBookingPayment } = require('../Controllers/bookingController');
+router.post('/api/bookings/initiate-payment', initiateBookingPayment);
+
+// Legacy direct booking creation (should be deprecated)
 router.post('/api/bookings', createBooking);
 router.get('/api/bookings/available-slots/:date', getAvailableTimeSlots);
 

@@ -2,6 +2,7 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET);
 const User = require('../Models/userModel');
 const Booking = require('../Models/booking');
+const { Op } = require('sequelize');
 
 // Initiate payment for booking
 const initiateBookingPayment = async (req, res) => {
@@ -39,10 +40,25 @@ const initiateBookingPayment = async (req, res) => {
     else if (countryCode === 'GH') currency = 'ghs';
     else if (countryCode === 'NG') currency = 'ngn';
 
-    // Create PaymentIntent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(Number(price) * 100),
-      currency,
+    // Create Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: currency,
+            product_data: {
+              name: serviceType,
+              description: specialInstructions || '',
+            },
+            unit_amount: Math.round(Number(price) * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${process.env.SUCCESS_URL || 'http://localhost:3000'}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CANCEL_URL || 'http://localhost:3000'}/booking-cancelled`,
       metadata: {
         userId: userId.toString(),
         customerName,
@@ -50,11 +66,10 @@ const initiateBookingPayment = async (req, res) => {
         date,
         time
       },
-      receipt_email: customerEmail,
-      description: `Service booking: ${serviceType}`
+      customer_email: customerEmail,
     });
 
-    // Create a pending booking record with paymentIntentId
+    // Create a pending booking record with session ID
     const featuresArray = Array.isArray(selectedFeatures) ? selectedFeatures : [];
     const pendingBooking = await Booking.create({
       customerName,
@@ -70,14 +85,14 @@ const initiateBookingPayment = async (req, res) => {
       specialInstructions,
       userId,
       status: 'pending',
-      paymentIntentId: paymentIntent.id
+      paymentIntentId: session.id // Store session ID for webhook lookup
     });
 
-    // Return client secret and booking reference to frontend
+    // Return session ID and booking reference to frontend
     return res.json({
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
-      bookingReference: pendingBooking.bookingReference
+      sessionId: session.id,
+      bookingReference: pendingBooking.bookingReference,
+      url: session.url // For redirecting to Stripe Checkout
     });
   } catch (error) {
     console.error('Error initiating booking payment:', error);
@@ -329,6 +344,45 @@ const testEmailSystem = async (req, res) => {
   res.json({ message: 'testEmailSystem not yet implemented' });
 };
 
+// Stripe webhook for payment confirmation
+const stripeWebhook = async (req, res) => {
+  let event;
+  try {
+    // Stripe recommends verifying the signature in production
+    event = req.body;
+    if (req.headers['stripe-signature'] && process.env.STRIPE_WEBHOOK_SECRET) {
+      const sig = req.headers['stripe-signature'];
+      event = require('stripe')(process.env.STRIPE_SECRET).webhooks.constructEvent(
+        req.rawBody,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    }
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle payment_intent.succeeded event
+  if (event.type === 'payment_intent.succeeded') {
+    const paymentIntent = event.data.object;
+    const paymentIntentId = paymentIntent.id;
+    try {
+      // Find and update booking
+      const booking = await Booking.findOne({ where: { paymentIntentId } });
+      if (booking && booking.status !== 'confirmed') {
+        booking.status = 'confirmed';
+        await booking.save();
+        console.log(`Booking ${booking.bookingReference} confirmed after payment.`);
+      }
+    } catch (err) {
+      console.error('Error confirming booking after payment:', err.message);
+    }
+  }
+
+  res.status(200).json({ received: true });
+};
+
 module.exports = {
   initiateBookingPayment,
   createBooking,
@@ -343,5 +397,6 @@ module.exports = {
   getDashboardUpcomingBookings,
   getRecentBookings,
   getMyBookingById,
-  testEmailSystem
+  testEmailSystem,
+  stripeWebhook
 };

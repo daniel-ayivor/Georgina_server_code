@@ -14,7 +14,8 @@ const {
   getDashboardUpcomingBookings,
   getRecentBookings,
   getMyBookingById,
-  testEmailSystem
+  testEmailSystem,
+  stripeWebhook // Import the stripeWebhook controller
 } = require('../Controllers/bookingController');
 router.post('/test-email-system', testEmailSystem);
 
@@ -50,5 +51,8 @@ router.get('/api/bookings/email/:email', getBookingsByEmail); // Public access b
 router.get('/api/admin/bookings', getBookings);
 router.put('/api/admin/bookings/:id', updateBooking);
 router.delete('/api/admin/bookings/:id', deleteBooking);
+
+// Stripe webhook route for payment confirmation
+router.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), stripeWebhook);
 
 module.exports = router;

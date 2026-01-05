@@ -8,97 +8,97 @@ const { Op } = require('sequelize');
 const initiateBookingPayment = async (req, res) => {
   try {
     const {
-      customerName,
-      customerEmail,
-      customerPhone,
-      serviceType,
-      selectedFeatures,
-      address,
-      date,
-      time,
-      duration,
-      price,
-      specialInstructions,
       userId,
-      countryCode
+      countryCode,
+      amount,
+      currency,
+      services,
+      customerInfo,
+      appointment
     } = req.body;
 
-    // Validate required fields
-    if (!userId || !price || !customerEmail) {
-      return res.status(400).json({ success: false, message: 'Missing required fields for payment.' });
+    // Validate required fields - check nested structure
+    if (!userId || !amount || !customerInfo?.customerEmail) {
+      console.log('❌ Validation failed:', { 
+        hasUserId: !!userId, 
+        hasAmount: !!amount, 
+        hasCustomerInfo: !!customerInfo,
+        hasEmail: !!customerInfo?.customerEmail 
+      });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields for payment.' 
+      });
     }
 
     // Find user
     const user = await User.findByPk(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found.' 
+      });
     }
 
-    // Determine currency
-    let currency = 'usd';
-    if (countryCode === 'GB') currency = 'gbp';
-    else if (countryCode === 'GH') currency = 'ghs';
-    else if (countryCode === 'NG') currency = 'ngn';
-
-    // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: currency,
-            product_data: {
-              name: serviceType,
-              description: specialInstructions || '',
-            },
-            unit_amount: Math.round(Number(price) * 100),
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${process.env.SUCCESS_URL || 'http://localhost:3000'}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CANCEL_URL || 'http://localhost:3000'}/booking-cancelled`,
+    // Create PaymentIntent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount),
+      currency: currency.toLowerCase(),
+      automatic_payment_methods: { enabled: true },
       metadata: {
         userId: userId.toString(),
-        customerName,
-        serviceType,
-        date,
-        time
+        customerName: customerInfo.customerName || user.name,
+        customerEmail: customerInfo.customerEmail,
+        customerPhone: customerInfo.customerPhone || '',
+        address: customerInfo.address || '',
+        appointmentDate: appointment?.date || '',
+        appointmentTime: appointment?.time || '',
+        services: JSON.stringify(services?.map(s => s.serviceName) || []),
+        specialInstructions: customerInfo.specialInstructions || '',
+        type: 'booking'
       },
-      customer_email: customerEmail,
+      receipt_email: customerInfo.customerEmail || user.email,
     });
 
-    // Create a pending booking record with session ID
-    const featuresArray = Array.isArray(selectedFeatures) ? selectedFeatures : [];
+    // Create a pending booking record with payment intent ID
+    const serviceType = services?.[0]?.serviceName || 'Cleaning Service';
+    const selectedFeatures = services?.map(s => s.serviceName) || [];
+    
     const pendingBooking = await Booking.create({
-      customerName,
-      customerEmail,
-      customerPhone,
-      serviceType,
-      selectedFeatures: featuresArray,
-      address,
-      date,
-      time,
-      duration,
-      price,
-      specialInstructions,
+      customerName: customerInfo.customerName || user.name,
+      customerEmail: customerInfo.customerEmail,
+      customerPhone: customerInfo.customerPhone || '',
+      serviceType: serviceType,
+      selectedFeatures: selectedFeatures,
+      address: customerInfo.address || '',
+      date: appointment?.date || new Date().toISOString().split('T')[0],
+      time: appointment?.time || '09:00',
+      duration: appointment?.duration || 2,
+      price: amount / 100, // Convert from cents to currency units
+      specialInstructions: customerInfo.specialInstructions || '',
       userId,
       status: 'pending',
       paymentStatus: 'pending',
-      paymentIntentId: session.id, // Store session ID for webhook lookup
+      paymentIntentId: paymentIntent.id,
       paidAmount: 0
     });
 
-    // Return session ID and booking reference to frontend
+    console.log('✅ Payment intent created:', paymentIntent.id);
+    console.log('✅ Pending booking created:', pendingBooking.bookingReference);
+
     return res.json({
-      sessionId: session.id,
-      bookingReference: pendingBooking.bookingReference,
-      url: session.url // For redirecting to Stripe Checkout
+      success: true,
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      bookingReference: pendingBooking.bookingReference
     });
   } catch (error) {
-    console.error('Error initiating booking payment:', error);
-    return res.status(500).json({ success: false, message: 'Failed to initiate payment', error: error.message });
+    console.error('Error creating payment intent:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to create payment intent', 
+      error: error.message 
+    });
   }
 };
 

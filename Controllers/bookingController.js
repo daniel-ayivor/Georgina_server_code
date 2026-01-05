@@ -423,7 +423,9 @@ const deleteBooking = async (req, res) => {
 
 const getAvailableTimeSlots = async (req, res) => {
   try {
-    const { date, duration = 2 } = req.query;
+// AFTER (Correct):
+const { date } = req.params;
+const { duration = 2 } = req.query;
 
     if (!date) {
       return res.status(400).json({

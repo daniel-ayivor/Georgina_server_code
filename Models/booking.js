@@ -10,14 +10,7 @@ const Booking = sequelize.define(
     customerEmail: { type: DataTypes.STRING, allowNull: false },
     customerPhone: { type: DataTypes.STRING, allowNull: false },
     serviceType: {
-      type: DataTypes.ENUM(
-        "Office Cleaning",
-        "Kitchen Cleaning",
-        "Bathroom Cleaning",
-        "Dusting Service",
-        "Mopping Service",
-        "Vacuuming Service"
-      ),
+      type: DataTypes.STRING,
       allowNull: false,
     },
     selectedFeatures: { type: DataTypes.JSON, allowNull: true, defaultValue: [] },

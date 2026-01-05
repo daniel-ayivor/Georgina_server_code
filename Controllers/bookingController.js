@@ -331,7 +331,8 @@ const getBookings = async (req, res) => {
     const { 
       page = 1, 
       limit = 10, 
-      status, 
+      status,
+      paymentStatus, 
       serviceType,
       date,
       search 
@@ -340,6 +341,7 @@ const getBookings = async (req, res) => {
     const where = {};
     
     if (status) where.status = status;
+    if (paymentStatus) where.paymentStatus = paymentStatus;
     if (serviceType) where.serviceType = serviceType;
     if (date) where.date = date;
     
@@ -358,12 +360,38 @@ const getBookings = async (req, res) => {
       where,
       order: [['createdAt', 'DESC']],
       offset,
-      limit: parseInt(limit)
+      limit: parseInt(limit),
+      attributes: [
+        'id',
+        'userId',
+        'customerName',
+        'customerEmail',
+        'customerPhone',
+        'serviceType',
+        'selectedFeatures',
+        'address',
+        'date',
+        'time',
+        'duration',
+        'price',
+        'status',
+        'paymentStatus',
+        'paymentIntentId',
+        'paidAmount',
+        'bookingReference',
+        'notes',
+        'specialInstructions',
+        'createdAt',
+        'updatedAt'
+      ]
     });
 
     res.json({
       success: true,
       total: count,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(count / limit),
       bookings
     });
   } catch (error) {

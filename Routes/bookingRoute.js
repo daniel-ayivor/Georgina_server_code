@@ -25,6 +25,7 @@ router.post('/test-email-system', testEmailSystem);
 // Initiate payment for booking (new flow)
 const { initiateBookingPayment } = require('../Controllers/bookingController');
 router.post('/api/bookings/initiate-payment', initiateBookingPayment);
+router.post('/api/bookings/payment-intent', initiateBookingPayment); // Alternative endpoint for frontend
 
 // Legacy direct booking creation (should be deprecated)
 router.post('/api/bookings', createBooking);

@@ -422,7 +422,90 @@ const deleteBooking = async (req, res) => {
 };
 
 const getAvailableTimeSlots = async (req, res) => {
-  res.json({ message: 'getAvailableTimeSlots not yet implemented' });
+  try {
+    const { date, duration = 2 } = req.query;
+
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Date is required'
+      });
+    }
+
+    // Define business hours (8 AM to 6 PM)
+    const businessStartHour = 8;
+    const businessEndHour = 18;
+    
+    // Generate all possible time slots
+    const allTimeSlots = [];
+    for (let hour = businessStartHour; hour < businessEndHour; hour++) {
+      allTimeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
+      allTimeSlots.push(`${hour.toString().padStart(2, '0')}:30`);
+    }
+
+    // Get all bookings for the specified date
+    const existingBookings = await Booking.findAll({
+      where: {
+        date,
+        status: {
+          [Op.in]: ['pending', 'confirmed', 'in-progress']
+        }
+      },
+      attributes: ['time', 'duration']
+    });
+
+    // Helper function to check if a time slot conflicts with existing bookings
+    const isSlotAvailable = (slotTime) => {
+      const [slotHour, slotMinute] = slotTime.split(':').map(Number);
+      const slotStartMinutes = slotHour * 60 + slotMinute;
+      const slotEndMinutes = slotStartMinutes + parseInt(duration) * 60;
+
+      for (const booking of existingBookings) {
+        const [bookingHour, bookingMinute] = booking.time.split(':').map(Number);
+        const bookingStartMinutes = bookingHour * 60 + bookingMinute;
+        const bookingEndMinutes = bookingStartMinutes + booking.duration * 60;
+
+        // Check if there's any overlap
+        if (
+          (slotStartMinutes >= bookingStartMinutes && slotStartMinutes < bookingEndMinutes) ||
+          (slotEndMinutes > bookingStartMinutes && slotEndMinutes <= bookingEndMinutes) ||
+          (slotStartMinutes <= bookingStartMinutes && slotEndMinutes >= bookingEndMinutes)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    // Filter out unavailable slots and slots that extend past business hours
+    const availableSlots = allTimeSlots.filter(slot => {
+      const [hour, minute] = slot.split(':').map(Number);
+      const slotEndHour = hour + Math.floor((minute + parseInt(duration) * 60) / 60);
+      
+      // Check if slot extends past business hours
+      if (slotEndHour > businessEndHour) {
+        return false;
+      }
+      
+      return isSlotAvailable(slot);
+    });
+
+    res.json({
+      success: true,
+      date,
+      duration: parseInt(duration),
+      availableSlots,
+      totalSlots: availableSlots.length,
+      bookedSlots: existingBookings.length
+    });
+  } catch (error) {
+    console.error('Error fetching available time slots:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching available time slots',
+      error: error.message
+    });
+  }
 };
 
 const getUserDashboardBookings = async (req, res) => {

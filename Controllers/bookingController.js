@@ -85,7 +85,9 @@ const initiateBookingPayment = async (req, res) => {
       specialInstructions,
       userId,
       status: 'pending',
-      paymentIntentId: session.id // Store session ID for webhook lookup
+      paymentStatus: 'pending',
+      paymentIntentId: session.id, // Store session ID for webhook lookup
+      paidAmount: 0
     });
 
     // Return session ID and booking reference to frontend
@@ -117,14 +119,17 @@ const createBooking = async (req, res) => {
       duration,
       price,
       specialInstructions,
-      userId
+      userId,
+      sessionId, // Stripe session ID for payment verification
+      requirePayment = true // Flag to require payment (default true)
     } = req.body;
 
     console.log('🔍 [BACKEND-DEBUG] Creating booking with data:', {
       customerName,
       customerEmail, 
       serviceType,
-      userId
+      userId,
+      requirePayment
     });
 
     console.log('🔍 [BACKEND-DEBUG] Full request body:', req.body);
@@ -137,6 +142,68 @@ const createBooking = async (req, res) => {
         message: "Validation error",
         errors: [{ field: "userId", message: "Booking.userId cannot be null" }]
       });
+    }
+
+    // Check if payment is required and verify payment status
+    if (requirePayment) {
+      if (!sessionId) {
+        console.error('❌ [BACKEND-DEBUG] Payment session ID is missing');
+        return res.status(400).json({
+          success: false,
+          message: "Payment verification required. Please complete payment first."
+        });
+      }
+
+      // Check if booking with this session already exists and is paid
+      const existingBooking = await Booking.findOne({ 
+        where: { paymentIntentId: sessionId } 
+      });
+
+      if (existingBooking && existingBooking.paymentStatus === 'completed') {
+        console.log('✅ [BACKEND-DEBUG] Booking already exists with completed payment');
+        return res.status(200).json({
+          success: true,
+          message: 'Booking already confirmed',
+          data: {
+            bookingReference: existingBooking.bookingReference,
+            customerName: existingBooking.customerName,
+            serviceType: existingBooking.serviceType,
+            date: existingBooking.date,
+            time: existingBooking.time,
+            status: existingBooking.status,
+            paymentStatus: existingBooking.paymentStatus
+          }
+        });
+      }
+
+      if (existingBooking && existingBooking.paymentStatus !== 'completed') {
+        console.error('❌ [BACKEND-DEBUG] Payment not completed for session:', sessionId);
+        return res.status(402).json({
+          success: false,
+          message: "Payment not completed. Please complete payment to confirm booking.",
+          paymentStatus: existingBooking.paymentStatus
+        });
+      }
+
+      // Verify payment with Stripe
+      try {
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (session.payment_status !== 'paid') {
+          console.error('❌ [BACKEND-DEBUG] Stripe payment not confirmed:', session.payment_status);
+          return res.status(402).json({
+            success: false,
+            message: "Payment not confirmed. Please complete payment first.",
+            paymentStatus: session.payment_status
+          });
+        }
+        console.log('✅ [BACKEND-DEBUG] Payment verified with Stripe');
+      } catch (stripeError) {
+        console.error('❌ [BACKEND-DEBUG] Error verifying payment with Stripe:', stripeError.message);
+        return res.status(400).json({
+          success: false,
+          message: "Failed to verify payment. Please try again."
+        });
+      }
     }
 
     // Convert userId to number to be safe
@@ -181,7 +248,11 @@ const createBooking = async (req, res) => {
       duration: duration,
       price: price,
       specialInstructions,
-      userId: numericUserId
+      userId: numericUserId,
+      paymentStatus: requirePayment && sessionId ? 'completed' : 'pending',
+      paymentIntentId: sessionId || null,
+      paidAmount: requirePayment && sessionId ? price : 0,
+      status: requirePayment && sessionId ? 'confirmed' : 'pending'
     });
 
     console.log('✅ [BACKEND-DEBUG] Booking created successfully:', booking.bookingReference);
@@ -189,7 +260,7 @@ const createBooking = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Booking created successfully',
+      message: requirePayment ? 'Booking confirmed with payment' : 'Booking created successfully',
       data: {
         bookingReference: booking.bookingReference,
         customerName: booking.customerName,
@@ -200,6 +271,8 @@ const createBooking = async (req, res) => {
         address: booking.address,
         specialInstructions: booking.specialInstructions,
         status: booking.status,
+        paymentStatus: booking.paymentStatus,
+        paidAmount: booking.paidAmount,
         userId: booking.userId
       }
     });
@@ -363,20 +436,62 @@ const stripeWebhook = async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Handle payment_intent.succeeded event
+  // Handle checkout.session.completed event
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const sessionId = session.id;
+    
+    try {
+      // Find and update booking
+      const booking = await Booking.findOne({ where: { paymentIntentId: sessionId } });
+      if (booking) {
+        booking.status = 'confirmed';
+        booking.paymentStatus = 'completed';
+        booking.paidAmount = session.amount_total / 100; // Convert from cents
+        await booking.save();
+        console.log(`✅ Booking ${booking.bookingReference} confirmed after payment.`);
+        console.log(`💰 Payment amount: ${booking.paidAmount}`);
+      } else {
+        console.warn(`⚠️ No booking found for session: ${sessionId}`);
+      }
+    } catch (err) {
+      console.error('❌ Error confirming booking after payment:', err.message);
+    }
+  }
+
+  // Handle payment_intent.succeeded event (backup)
   if (event.type === 'payment_intent.succeeded') {
     const paymentIntent = event.data.object;
     const paymentIntentId = paymentIntent.id;
+    
     try {
-      // Find and update booking
+      // Find and update booking by payment intent
       const booking = await Booking.findOne({ where: { paymentIntentId } });
-      if (booking && booking.status !== 'confirmed') {
+      if (booking && booking.paymentStatus !== 'completed') {
         booking.status = 'confirmed';
+        booking.paymentStatus = 'completed';
+        booking.paidAmount = paymentIntent.amount / 100; // Convert from cents
         await booking.save();
-        console.log(`Booking ${booking.bookingReference} confirmed after payment.`);
+        console.log(`✅ Booking ${booking.bookingReference} confirmed via payment_intent.`);
       }
     } catch (err) {
-      console.error('Error confirming booking after payment:', err.message);
+      console.error('❌ Error confirming booking after payment_intent:', err.message);
+    }
+  }
+
+  // Handle payment failures
+  if (event.type === 'checkout.session.expired' || event.type === 'payment_intent.payment_failed') {
+    const sessionId = event.data.object.id;
+    
+    try {
+      const booking = await Booking.findOne({ where: { paymentIntentId: sessionId } });
+      if (booking) {
+        booking.paymentStatus = 'failed';
+        await booking.save();
+        console.log(`❌ Booking ${booking.bookingReference} payment failed.`);
+      }
+    } catch (err) {
+      console.error('❌ Error updating failed payment:', err.message);
     }
   }
 

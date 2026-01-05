@@ -31,6 +31,13 @@ const Booking = sequelize.define(
       allowNull: false,
       defaultValue: "pending",
     },
+    paymentStatus: {
+      type: DataTypes.ENUM("pending", "completed", "failed", "refunded"),
+      allowNull: false,
+      defaultValue: "pending",
+    },
+    paymentIntentId: { type: DataTypes.STRING, allowNull: true },
+    paidAmount: { type: DataTypes.FLOAT, allowNull: true },
     bookingReference: { type: DataTypes.STRING, unique: true, allowNull: false },
     notes: { type: DataTypes.TEXT, allowNull: true },
     specialInstructions: { type: DataTypes.TEXT, allowNull: true },

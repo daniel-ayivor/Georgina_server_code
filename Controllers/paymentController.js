@@ -184,23 +184,47 @@ const PaymentIntent = async (req, res) => {
 
         // Check if we should create a PaymentIntent (for embedded Elements)
         if (paymentIntentMode) {
-            // If no existing order, create one
+            // If no existing order, check for recent pending order or create new one
             if (!orderId) {
-                order = await Order.create({
-                    userId: user.id,
-                    totalAmount,
-                    status: 'pending'
+                // Check if there's a recent pending order for this user (created in last 2 minutes)
+                const recentOrder = await Order.findOne({
+                    where: {
+                        userId: user.id,
+                        status: 'pending',
+                        paymentIntentId: null,
+                        createdAt: {
+                            [require('sequelize').Op.gte]: new Date(Date.now() - 2 * 60 * 1000)
+                        }
+                    },
+                    include: [{
+                        model: OrderItem,
+                        as: 'items'
+                    }],
+                    order: [['createdAt', 'DESC']]
                 });
+                
+                // If recent order exists with same total amount, reuse it
+                if (recentOrder && Math.abs(recentOrder.totalAmount - totalAmount) < 0.01) {
+                    console.log(`♻️ Reusing existing order ${recentOrder.id} to prevent duplicate`);
+                    order = recentOrder;
+                } else {
+                    // Create new order
+                    order = await Order.create({
+                        userId: user.id,
+                        totalAmount,
+                        status: 'pending'
+                    });
 
-                // Create order item with product image
-                await OrderItem.create({
-                    orderId: order.id,
-                    productId: product.id,
-                    productName: product.name,
-                    image: product.images && product.images.length > 0 ? product.images[0] : null,
-                    quantity: quantity,
-                    price: parseFloat(product.price)
-                });
+                    // Create order item with product image
+                    await OrderItem.create({
+                        orderId: order.id,
+                        productId: product.id,
+                        productName: product.name,
+                        image: product.images && product.images.length > 0 ? product.images[0] : null,
+                        quantity: quantity,
+                        price: parseFloat(product.price)
+                    });
+                }
             }
             
             const orderTotal = orderId ? order.totalAmount : totalAmount;
@@ -231,23 +255,47 @@ const PaymentIntent = async (req, res) => {
                 type: 'payment_intent'
             });
         } else {
-            // If no existing order, create one
+            // If no existing order, check for recent pending order or create new one
             if (!orderId) {
-                order = await Order.create({
-                    userId: user.id,
-                    totalAmount,
-                    status: 'pending'
+                // Check if there's a recent pending order for this user (created in last 2 minutes)
+                const recentOrder = await Order.findOne({
+                    where: {
+                        userId: user.id,
+                        status: 'pending',
+                        paymentIntentId: null,
+                        createdAt: {
+                            [require('sequelize').Op.gte]: new Date(Date.now() - 2 * 60 * 1000)
+                        }
+                    },
+                    include: [{
+                        model: OrderItem,
+                        as: 'items'
+                    }],
+                    order: [['createdAt', 'DESC']]
                 });
+                
+                // If recent order exists with same total amount, reuse it
+                if (recentOrder && Math.abs(recentOrder.totalAmount - totalAmount) < 0.01) {
+                    console.log(`♻️ Reusing existing order ${recentOrder.id} to prevent duplicate`);
+                    order = recentOrder;
+                } else {
+                    // Create new order
+                    order = await Order.create({
+                        userId: user.id,
+                        totalAmount,
+                        status: 'pending'
+                    });
 
-                // Create order item with product image
-                await OrderItem.create({
-                    orderId: order.id,
-                    productId: product.id,
-                    productName: product.name,
-                    image: product.images && product.images.length > 0 ? product.images[0] : null,
-                    quantity: quantity,
-                    price: parseFloat(product.price)
-                });
+                    // Create order item with product image
+                    await OrderItem.create({
+                        orderId: order.id,
+                        productId: product.id,
+                        productName: product.name,
+                        image: product.images && product.images.length > 0 ? product.images[0] : null,
+                        quantity: quantity,
+                        price: parseFloat(product.price)
+                    });
+                }
             }
             
             // Build line items from order

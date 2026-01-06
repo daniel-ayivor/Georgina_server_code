@@ -510,9 +510,11 @@ const { duration = 2 } = req.query;
   }
 };
 
+
 const getUserDashboardBookings = async (req, res) => {
   try {
-    const userId = req.params.userId || req.user?.id;
+    // ✅ FIXED: Check query params AND params AND auth user
+    const userId = req.query.id || req.query.userId || req.params.userId || req.user?.id;
     
     if (!userId) {
       return res.status(400).json({
@@ -525,13 +527,16 @@ const getUserDashboardBookings = async (req, res) => {
       page = 1, 
       limit = 10, 
       status,
-      paymentStatus 
+      paymentStatus,
+      email // Also accept email for additional filtering
     } = req.query;
 
     const where = { userId };
     
     if (status) where.status = status;
     if (paymentStatus) where.paymentStatus = paymentStatus;
+    // Optionally filter by email as well for security
+    if (email) where.customerEmail = email;
 
     const offset = (page - 1) * limit;
 
@@ -579,6 +584,76 @@ const getUserDashboardBookings = async (req, res) => {
     });
   }
 };
+
+// const getUserDashboardBookings = async (req, res) => {
+//   try {
+//     const userId = req.params.userId || req.user?.id;
+    
+//     if (!userId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'User ID is required'
+//       });
+//     }
+
+//     const { 
+//       page = 1, 
+//       limit = 10, 
+//       status,
+//       paymentStatus 
+//     } = req.query;
+
+//     const where = { userId };
+    
+//     if (status) where.status = status;
+//     if (paymentStatus) where.paymentStatus = paymentStatus;
+
+//     const offset = (page - 1) * limit;
+
+//     const { count, rows: bookings } = await Booking.findAndCountAll({
+//       where,
+//       order: [['createdAt', 'DESC']],
+//       offset,
+//       limit: parseInt(limit),
+//       attributes: [
+//         'id',
+//         'customerName',
+//         'customerEmail',
+//         'customerPhone',
+//         'serviceType',
+//         'selectedFeatures',
+//         'address',
+//         'date',
+//         'time',
+//         'duration',
+//         'price',
+//         'status',
+//         'paymentStatus',
+//         'paidAmount',
+//         'bookingReference',
+//         'specialInstructions',
+//         'createdAt',
+//         'updatedAt'
+//       ]
+//     });
+
+//     res.json({
+//       success: true,
+//       total: count,
+//       page: parseInt(page),
+//       limit: parseInt(limit),
+//       totalPages: Math.ceil(count / limit),
+//       bookings
+//     });
+//   } catch (error) {
+//     console.error('Error fetching user dashboard bookings:', error);
+//     res.status(500).json({ 
+//       success: false, 
+//       message: 'Error fetching user bookings', 
+//       error: error.message 
+//     });
+//   }
+// };
 
 const getDashboardUpcomingBookings = async (req, res) => {
   try {

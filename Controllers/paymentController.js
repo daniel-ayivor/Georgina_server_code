@@ -9,18 +9,60 @@ const nodemailer = require('nodemailer');
 
 // Create Checkout Session for Embedded Checkout
 const createEmbeddedCheckout = async (req, res) => {
-    const { productId, userId, quantity, countryCode } = req.body;
+    const { productId, userId, quantity, countryCode, orderId } = req.body;
 
     try {
-        const product = await Product.findByPk(productId);
-        const user = await User.findByPk(userId);
+        let order;
+        
+        // If orderId is provided, use existing order; otherwise create new one
+        if (orderId) {
+            order = await Order.findByPk(orderId);
+            if (!order) {
+                return res.status(404).json({ message: 'Order not found' });
+            }
+        } else {
+            // Legacy flow: create order from product details
+            const product = await Product.findByPk(productId);
+            const user = await User.findByPk(userId);
 
-        if (!product || !user) {
-            return res.status(404).json({ message: 'Product or User not found' });
+            if (!product || !user) {
+                return res.status(404).json({ message: 'Product or User not found' });
+            }
+
+            const totalAmount = product.price * quantity;
+            
+            // Create order
+            order = await Order.create({
+                userId: user.id,
+                totalAmount,
+                status: 'pending'
+            });
+
+            // Create order item with product image
+            await OrderItem.create({
+                orderId: order.id,
+                productId: product.id,
+                productName: product.name,
+                image: product.images && product.images.length > 0 ? product.images[0] : null,
+                quantity: quantity,
+                price: parseFloat(product.price)
+            });
         }
 
-        const totalAmount = product.price * quantity;
+        // Fetch order with items for Stripe session
+        const fullOrder = await Order.findByPk(order.id, {
+            include: [{
+                model: OrderItem,
+                as: 'items',
+                include: [{
+                    model: Product,
+                    as: 'product'
+                }]
+            }]
+        });
 
+        const user = await User.findByPk(order.userId);
+        
         // Determine currency based on country code
         let currency = 'eur';
         
@@ -34,46 +76,29 @@ const createEmbeddedCheckout = async (req, res) => {
             currency = countryCode === 'NO' ? 'nok' : countryCode === 'SE' ? 'sek' : 'dkk';
         }
         
-        // Create order first
-        const order = await Order.create({
-            userId: user.id,
-            totalAmount,
-            status: 'pending'
-        });
-
-        // Create order item with product image
-        await OrderItem.create({
-            orderId: order.id,
-            productId: product.id,
-            productName: product.name,
-            image: product.images && product.images.length > 0 ? product.images[0] : null,
-            quantity: quantity,
-            price: parseFloat(product.price)
-        });
+        // Build line items from order items
+        const lineItems = fullOrder.items.map(item => ({
+            price_data: {
+                currency: currency,
+                product_data: {
+                    name: item.productName,
+                    description: item.product?.description || '',
+                },
+                unit_amount: Math.round(item.price * 100),
+            },
+            quantity: item.quantity,
+        }));
 
         // Stripe Checkout Session for EMBEDDED checkout
         const session = await stripe.checkout.sessions.create({
             ui_mode: 'embedded', // KEY CHANGE: Enable embedded mode
             payment_method_types: ['card'],
-            line_items: [
-                {
-                    price_data: {
-                        currency: currency, 
-                        product_data: {
-                            name: product.name,
-                            description: product.description || '',
-                        },
-                        unit_amount: Math.round(totalAmount * 100),
-                    },
-                    quantity,
-                },
-            ],
+            line_items: lineItems,
             mode: 'payment',
             return_url: `${process.env.SUCCESS_URL || process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-return?session_id={CHECKOUT_SESSION_ID}`,
             metadata: { 
-                productId: productId.toString(), 
-                userId: userId.toString(),
-                orderId: order.id.toString()
+                orderId: order.id.toString(),
+                userId: order.userId.toString()
             },
             customer_email: user.email,
         });
@@ -100,17 +125,46 @@ const createEmbeddedCheckout = async (req, res) => {
 
 
 const PaymentIntent = async (req, res) => {
-    const { productId, userId, quantity, countryCode, paymentIntentMode } = req.body;
+    const { productId, userId, quantity, countryCode, paymentIntentMode, orderId } = req.body;
 
     try {
-        const product = await Product.findByPk(productId);
-        const user = await User.findByPk(userId);
+        let order;
+        let user;
+        
+        // If orderId is provided, use existing order
+        if (orderId) {
+            order = await Order.findByPk(orderId, {
+                include: [{
+                    model: OrderItem,
+                    as: 'items',
+                    include: [{
+                        model: Product,
+                        as: 'product'
+                    }]
+                }]
+            });
+            
+            if (!order) {
+                return res.status(404).json({ message: 'Order not found' });
+            }
+            
+            user = await User.findByPk(order.userId);
+            
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+        } else {
+            // Legacy flow: create order from product details
+            const product = await Product.findByPk(productId);
+            user = await User.findByPk(userId);
 
-        if (!product || !user) {
-            return res.status(404).json({ message: 'Product or User not found' });
-        }
+            if (!product || !user) {
+                return res.status(404).json({ message: 'Product or User not found' });
+            }
 
-        const totalAmount = product.price * quantity;
+            const totalAmount = product.price * quantity;
+
+            const totalAmount = product.price * quantity;
 
         // Determine currency based on country code
         let currency = 'eur'; // Default to EUR for Europe
@@ -129,46 +183,45 @@ const PaymentIntent = async (req, res) => {
 
         // Check if we should create a PaymentIntent (for embedded Elements)
         if (paymentIntentMode) {
+            // If no existing order, create one
+            if (!orderId) {
+                order = await Order.create({
+                    userId: user.id,
+                    totalAmount,
+                    status: 'pending'
+                });
+
+                // Create order item with product image
+                await OrderItem.create({
+                    orderId: order.id,
+                    productId: product.id,
+                    productName: product.name,
+                    image: product.images && product.images.length > 0 ? product.images[0] : null,
+                    quantity: quantity,
+                    price: parseFloat(product.price)
+                });
+            }
+            
+            const orderTotal = orderId ? order.totalAmount : totalAmount;
+            
             // Create a REAL PaymentIntent for embedded Elements
             const paymentIntent = await stripe.paymentIntents.create({
-                amount: Math.round(totalAmount * 100), // Amount in cents
+                amount: Math.round(orderTotal * 100), // Amount in cents
                 currency: currency,
                 metadata: {
-                    productId: productId.toString(),
-                    userId: userId.toString(),
+                    orderId: order.id.toString(),
+                    userId: user.id.toString(),
                 },
                 automatic_payment_methods: {
                     enabled: true,
                 },
-                description: `Purchase of ${product.name} (x${quantity})`,
+                description: orderId ? `Order #${order.orderNumber}` : `Purchase of ${product.name} (x${quantity})`,
                 receipt_email: user.email,
             });
 
-            // Create order with payment intent ID
-            const order = await Order.create({
-                userId: user.id,
-                totalAmount,
-                paymentIntentId: paymentIntent.id,
-                status: 'pending'
-            });
-
-            // Create order item with product image
-            await OrderItem.create({
-                orderId: order.id,
-                productId: product.id,
-                productName: product.name,
-                image: product.images && product.images.length > 0 ? product.images[0] : null,
-                quantity: quantity,
-                price: parseFloat(product.price)
-            });
-
-            // Update payment intent metadata with order ID
-            await stripe.paymentIntents.update(paymentIntent.id, {
-                metadata: {
-                    ...paymentIntent.metadata,
-                    orderId: order.id.toString()
-                }
-            });
+            // Update order with payment intent ID
+            order.paymentIntentId = paymentIntent.id;
+            await order.save();
 
             return res.json({ 
                 clientSecret: paymentIntent.client_secret, // This will start with pi_
@@ -177,57 +230,66 @@ const PaymentIntent = async (req, res) => {
                 type: 'payment_intent'
             });
         } else {
+            // If no existing order, create one
+            if (!orderId) {
+                order = await Order.create({
+                    userId: user.id,
+                    totalAmount,
+                    status: 'pending'
+                });
+
+                // Create order item with product image
+                await OrderItem.create({
+                    orderId: order.id,
+                    productId: product.id,
+                    productName: product.name,
+                    image: product.images && product.images.length > 0 ? product.images[0] : null,
+                    quantity: quantity,
+                    price: parseFloat(product.price)
+                });
+            }
+            
+            // Build line items from order
+            const fullOrder = await Order.findByPk(order.id, {
+                include: [{
+                    model: OrderItem,
+                    as: 'items',
+                    include: [{
+                        model: Product,
+                        as: 'product'
+                    }]
+                }]
+            });
+            
+            const lineItems = fullOrder.items.map(item => ({
+                price_data: {
+                    currency: currency,
+                    product_data: {
+                        name: item.productName,
+                        description: item.product?.description || '',
+                    },
+                    unit_amount: Math.round(item.price * 100),
+                },
+                quantity: item.quantity,
+            }));
+            
             // Original CheckoutSession logic (for redirect flow)
             const session = await stripe.checkout.sessions.create({
                 payment_method_types: ['card'],
-                line_items: [
-                    {
-                        price_data: {
-                            currency: currency, 
-                            product_data: {
-                                name: product.name,
-                                description: product.description || '',
-                            },
-                            unit_amount: Math.round(totalAmount * 100),
-                        },
-                        quantity,
-                    },
-                ],
+                line_items: lineItems,
                 mode: 'payment',
                 success_url: `${process.env.SUCCESS_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${process.env.CANCEL_URL}/payment-failed`,
                 metadata: { 
-                    productId: productId.toString(), 
-                    userId: userId.toString(),
-                    orderId: ''
+                    orderId: order.id.toString(),
+                    userId: user.id.toString()
                 },
                 customer_email: user.email, 
             });
 
-            const order = await Order.create({
-                userId: user.id,
-                totalAmount,
-                paymentIntentId: session.id,
-                status: 'pending'
-            });
-
-            // Create order item with product image
-            await OrderItem.create({
-                orderId: order.id,
-                productId: product.id,
-                productName: product.name,
-                image: product.images && product.images.length > 0 ? product.images[0] : null,
-                quantity: quantity,
-                price: parseFloat(product.price)
-            });
-
-            await stripe.checkout.sessions.update(session.id, {
-                metadata: {
-                    productId: productId.toString(),
-                    userId: userId.toString(),
-                    orderId: order.id.toString()
-                }
-            });
+            // Update order with session ID
+            order.paymentIntentId = session.id;
+            await order.save();
 
             return res.json({ 
                 url: session.url, 

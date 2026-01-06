@@ -26,6 +26,50 @@ const userOrderController = {
         });
       }
 
+      // Check for duplicate order (created in last 1 minute with same total)
+      const recentOrder = await Order.findOne({
+        where: {
+          userId,
+          status: 'pending',
+          totalAmount,
+          createdAt: {
+            [require('sequelize').Op.gte]: new Date(Date.now() - 60 * 1000)
+          }
+        },
+        include: [{
+          model: OrderItem,
+          as: 'items'
+        }],
+        order: [['createdAt', 'DESC']]
+      });
+
+      if (recentOrder) {
+        console.log(`♻️ Preventing duplicate - returning existing order ${recentOrder.id}`);
+        
+        // Return the existing order with full details
+        const completeOrder = await Order.findByPk(recentOrder.id, {
+          include: [
+            {
+              model: OrderItem,
+              as: 'items',
+              include: [
+                {
+                  model: Product,
+                  as: 'product'
+                }
+              ]
+            }
+          ]
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: "Order already exists",
+          data: completeOrder,
+          isDuplicate: true
+        });
+      }
+
       // Create the order
       const order = await Order.create({
         userId,

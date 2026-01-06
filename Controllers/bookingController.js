@@ -511,23 +511,296 @@ const { duration = 2 } = req.query;
 };
 
 const getUserDashboardBookings = async (req, res) => {
-  res.json({ message: 'getUserDashboardBookings not yet implemented' });
+  try {
+    const userId = req.params.userId || req.user?.id;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    const { 
+      page = 1, 
+      limit = 10, 
+      status,
+      paymentStatus 
+    } = req.query;
+
+    const where = { userId };
+    
+    if (status) where.status = status;
+    if (paymentStatus) where.paymentStatus = paymentStatus;
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: bookings } = await Booking.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      offset,
+      limit: parseInt(limit),
+      attributes: [
+        'id',
+        'customerName',
+        'customerEmail',
+        'customerPhone',
+        'serviceType',
+        'selectedFeatures',
+        'address',
+        'date',
+        'time',
+        'duration',
+        'price',
+        'status',
+        'paymentStatus',
+        'paidAmount',
+        'bookingReference',
+        'specialInstructions',
+        'createdAt',
+        'updatedAt'
+      ]
+    });
+
+    res.json({
+      success: true,
+      total: count,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(count / limit),
+      bookings
+    });
+  } catch (error) {
+    console.error('Error fetching user dashboard bookings:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching user bookings', 
+      error: error.message 
+    });
+  }
 };
 
 const getDashboardUpcomingBookings = async (req, res) => {
-  res.json({ message: 'getDashboardUpcomingBookings not yet implemented' });
+  try {
+    const userId = req.params.userId || req.user?.id;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    const { limit = 5 } = req.query;
+    const today = new Date().toISOString().split('T')[0];
+
+    const upcomingBookings = await Booking.findAll({
+      where: {
+        userId,
+        date: {
+          [Op.gte]: today
+        },
+        status: {
+          [Op.in]: ['pending', 'confirmed']
+        }
+      },
+      order: [['date', 'ASC'], ['time', 'ASC']],
+      limit: parseInt(limit),
+      attributes: [
+        'id',
+        'customerName',
+        'serviceType',
+        'selectedFeatures',
+        'address',
+        'date',
+        'time',
+        'duration',
+        'price',
+        'status',
+        'paymentStatus',
+        'bookingReference',
+        'createdAt'
+      ]
+    });
+
+    res.json({
+      success: true,
+      count: upcomingBookings.length,
+      bookings: upcomingBookings
+    });
+  } catch (error) {
+    console.error('Error fetching upcoming bookings:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching upcoming bookings', 
+      error: error.message 
+    });
+  }
 };
 
 const getRecentBookings = async (req, res) => {
-  res.json({ message: 'getRecentBookings not yet implemented' });
+  try {
+    const { limit = 10, userId } = req.query;
+    
+    const where = {};
+    if (userId) {
+      where.userId = userId;
+    }
+
+    const recentBookings = await Booking.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      attributes: [
+        'id',
+        'userId',
+        'customerName',
+        'customerEmail',
+        'serviceType',
+        'selectedFeatures',
+        'address',
+        'date',
+        'time',
+        'duration',
+        'price',
+        'status',
+        'paymentStatus',
+        'bookingReference',
+        'createdAt'
+      ]
+    });
+
+    res.json({
+      success: true,
+      count: recentBookings.length,
+      bookings: recentBookings
+    });
+  } catch (error) {
+    console.error('Error fetching recent bookings:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching recent bookings', 
+      error: error.message 
+    });
+  }
 };
 
 const getMyBookingById = async (req, res) => {
-  res.json({ message: 'getMyBookingById not yet implemented' });
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id || req.query.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Booking ID is required'
+      });
+    }
+
+    const booking = await Booking.findOne({
+      where: {
+        id,
+        userId // Ensure booking belongs to the user
+      },
+      attributes: [
+        'id',
+        'customerName',
+        'customerEmail',
+        'customerPhone',
+        'serviceType',
+        'selectedFeatures',
+        'address',
+        'date',
+        'time',
+        'duration',
+        'price',
+        'status',
+        'paymentStatus',
+        'paymentIntentId',
+        'paidAmount',
+        'bookingReference',
+        'notes',
+        'specialInstructions',
+        'createdAt',
+        'updatedAt'
+      ]
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found or you do not have access to it'
+      });
+    }
+
+    res.json({
+      success: true,
+      booking
+    });
+  } catch (error) {
+    console.error('Error fetching booking by ID:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching booking', 
+      error: error.message 
+    });
+  }
 };
 
 const testEmailSystem = async (req, res) => {
-  res.json({ message: 'testEmailSystem not yet implemented' });
+  try {
+    const { email, bookingReference } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email address is required'
+      });
+    }
+
+    // Test email data
+    const testData = {
+      to: email,
+      bookingReference: bookingReference || 'TEST-' + Date.now(),
+      customerName: 'Test Customer',
+      serviceType: 'Test Service',
+      date: new Date().toISOString().split('T')[0],
+      time: '10:00',
+      address: 'Test Address',
+      price: 100
+    };
+
+    // TODO: Implement actual email sending logic here
+    // Example: await sendEmail(testData);
+    
+    console.log('📧 Test email would be sent to:', email);
+    console.log('📧 Email data:', testData);
+
+    res.json({
+      success: true,
+      message: 'Email system test completed',
+      testData: {
+        recipient: email,
+        bookingReference: testData.bookingReference,
+        timestamp: new Date().toISOString()
+      },
+      note: 'Email sending functionality needs to be configured with an email service provider (e.g., SendGrid, AWS SES, Nodemailer)'
+    });
+  } catch (error) {
+    console.error('Error testing email system:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error testing email system', 
+      error: error.message 
+    });
+  }
 };
 
 // Stripe webhook for payment confirmation

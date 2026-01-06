@@ -29,8 +29,16 @@ const Order = sequelize.define('Order', {
     }
   },
   status: {
-    type: DataTypes.ENUM('pending', 'paid', 'failed', 'completed', 'cancelled'),
-    defaultValue: 'pending'
+    type: DataTypes.ENUM(
+      'confirmed',    // order confirmed
+      'processing',   // being prepared
+      'shipped',      // handed to courier
+      'delivered',    // completed successfully
+      'cancelled',    // cancelled by user/admin
+      'returned',     // returned after delivery
+      'failed'        // system or fulfillment failure
+    ),
+    defaultValue: 'confirmed'
   },
   totalAmount: {
     type: DataTypes.FLOAT,

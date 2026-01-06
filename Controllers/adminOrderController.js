@@ -78,7 +78,15 @@ exports.updateOrderStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-   const validStatuses = ['pending', 'paid', 'failed', 'completed', 'cancelled'];
+    const validStatuses = [
+      'confirmed',    // order confirmed
+      'processing',   // being prepared
+      'shipped',      // handed to courier
+      'delivered',    // completed successfully
+      'cancelled',    // cancelled by user/admin
+      'returned',     // returned after delivery
+      'failed'        // system or fulfillment failure
+    ];
     
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
@@ -142,9 +150,12 @@ exports.deleteOrder = async (req, res) => {
 exports.getOrderStats = async (req, res) => {
   try {
     const totalOrders = await Order.count();
-    const pendingOrders = await Order.count({ where: { status: 'pending' } });
-    const completedOrders = await Order.count({ where: { status: 'completed' } });
-    const totalRevenue = await Order.sum('totalAmount', { where: { status: 'completed' } });
+    const confirmedOrders = await Order.count({ where: { status: 'confirmed' } });
+    const processingOrders = await Order.count({ where: { status: 'processing' } });
+    const shippedOrders = await Order.count({ where: { status: 'shipped' } });
+    const deliveredOrders = await Order.count({ where: { status: 'delivered' } });
+    const cancelledOrders = await Order.count({ where: { status: 'cancelled' } });
+    const totalRevenue = await Order.sum('totalAmount', { where: { status: 'delivered' } });
 
     res.status(200).json({
       success: true,

@@ -23,7 +23,7 @@ const purchaseItem = async (req, res) => {
         const order = await Order.create({ 
             userId: userId,
             totalAmount: totalAmount,
-            status: 'pending'
+            status: 'confirmed'
         });
 
         // Create order item

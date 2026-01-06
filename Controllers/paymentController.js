@@ -2,6 +2,7 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET);
 const Order = require('../Models/orderModel');
+const OrderItem = require('../Models/orderItemModel');
 const Product = require('../Models/productModel');
 const User = require('../Models/userModel');
 const nodemailer = require('nodemailer');
@@ -36,9 +37,18 @@ const createEmbeddedCheckout = async (req, res) => {
         // Create order first
         const order = await Order.create({
             userId: user.id,
-            productId: product.id,
             totalAmount,
             status: 'pending'
+        });
+
+        // Create order item with product image
+        await OrderItem.create({
+            orderId: order.id,
+            productId: product.id,
+            productName: product.name,
+            image: product.images && product.images.length > 0 ? product.images[0] : null,
+            quantity: quantity,
+            price: parseFloat(product.price)
         });
 
         // Stripe Checkout Session for EMBEDDED checkout
@@ -137,10 +147,19 @@ const PaymentIntent = async (req, res) => {
             // Create order with payment intent ID
             const order = await Order.create({
                 userId: user.id,
-                productId: product.id,
                 totalAmount,
                 paymentIntentId: paymentIntent.id,
                 status: 'pending'
+            });
+
+            // Create order item with product image
+            await OrderItem.create({
+                orderId: order.id,
+                productId: product.id,
+                productName: product.name,
+                image: product.images && product.images.length > 0 ? product.images[0] : null,
+                quantity: quantity,
+                price: parseFloat(product.price)
             });
 
             // Update payment intent metadata with order ID
@@ -187,10 +206,19 @@ const PaymentIntent = async (req, res) => {
 
             const order = await Order.create({
                 userId: user.id,
-                productId: product.id,
                 totalAmount,
                 paymentIntentId: session.id,
                 status: 'pending'
+            });
+
+            // Create order item with product image
+            await OrderItem.create({
+                orderId: order.id,
+                productId: product.id,
+                productName: product.name,
+                image: product.images && product.images.length > 0 ? product.images[0] : null,
+                quantity: quantity,
+                price: parseFloat(product.price)
             });
 
             await stripe.checkout.sessions.update(session.id, {

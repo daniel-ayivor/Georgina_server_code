@@ -130,6 +130,8 @@ const PaymentIntent = async (req, res) => {
     try {
         let order;
         let user;
+        let product;
+        let totalAmount;
         
         // If orderId is provided, use existing order
         if (orderId) {
@@ -155,16 +157,15 @@ const PaymentIntent = async (req, res) => {
             }
         } else {
             // Legacy flow: create order from product details
-            const product = await Product.findByPk(productId);
+            product = await Product.findByPk(productId);
             user = await User.findByPk(userId);
 
             if (!product || !user) {
                 return res.status(404).json({ message: 'Product or User not found' });
             }
-
-            const totalAmount = product.price * quantity;
-
-            const totalAmount = product.price * quantity;
+            
+            totalAmount = product.price * quantity;
+        }
 
         // Determine currency based on country code
         let currency = 'eur'; // Default to EUR for Europe

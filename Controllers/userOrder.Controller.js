@@ -35,15 +35,31 @@ const userOrderController = {
         status: 'pending'
       });
 
-      // Create order items
+      // Fetch product details to get images
+      const productIds = items.map(item => item.productId);
+      const products = await Product.findAll({
+        where: { id: productIds },
+        attributes: ['id', 'images']
+      });
+      
+      const productMap = products.reduce((map, product) => {
+        map[product.id] = product;
+        return map;
+      }, {});
+
+      // Create order items with images
       const orderItems = await OrderItem.bulkCreate(
-        items.map(item => ({
-          orderId: order.id,
-          productId: item.productId,
-          productName: item.productName,
-          quantity: item.quantity,
-          price: item.price
-        }))
+        items.map(item => {
+          const product = productMap[item.productId];
+          return {
+            orderId: order.id,
+            productId: item.productId,
+            productName: item.productName,
+            image: product && product.images && product.images.length > 0 ? product.images[0] : null,
+            quantity: item.quantity,
+            price: item.price
+          };
+        })
       );
 
       // Fetch the complete order with items
@@ -148,7 +164,7 @@ getMyOrders: async (req, res) => {
               {
                 model: Product,
                 as: 'product',
-                attributes: ['id', 'name', 'price', 'image']
+                attributes: ['id', 'name', 'price', 'images']
               }
             ]
           },

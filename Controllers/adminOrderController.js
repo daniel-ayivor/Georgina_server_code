@@ -1,6 +1,7 @@
 const Order = require('../Models/orderModel');
 const OrderItem = require('../Models/orderItemModel');
 const User = require('../Models/userModel');
+const Product = require('../Models/productModel');
 
 // Get all orders (admin only)
 
@@ -16,7 +17,14 @@ exports.getAllOrders = async (req, res) => {
         },
         {
           model: OrderItem,
-          as: 'items'
+          as: 'items',
+          include: [
+            {
+              model: Product,
+              as: 'product',
+              attributes: ['id', 'name', 'price', 'images']
+            }
+          ]
         }
       ],
       order: [['createdAt', 'DESC']]
@@ -48,7 +56,14 @@ exports.getOrderById = async (req, res) => {
         },
         {
           model: OrderItem,
-          as: 'items'
+          as: 'items',
+          include: [
+            {
+              model: Product,
+              as: 'product',
+              attributes: ['id', 'name', 'price', 'images']
+            }
+          ]
         }
       ]
     });

@@ -31,6 +31,7 @@ const purchaseItem = async (req, res) => {
             orderId: order.id,
             productId: productId,
             productName: product.name,
+            image: product.images && product.images.length > 0 ? product.images[0] : null,
             price: parseFloat(product.price),
             quantity: parseInt(quantity)
         });
@@ -72,6 +73,7 @@ const getUserPurchase = async (req, res) => {
         const products = orders.flatMap(order => 
             order.items.map(item => ({
                 ...item.product.toJSON(),
+                image: item.image || (item.product.images && item.product.images.length > 0 ? item.product.images[0] : null),
                 purchaseDate: order.createdAt,
                 quantity: item.quantity,
                 orderId: order.id,

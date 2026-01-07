@@ -15,7 +15,8 @@ const {
   getRecentBookings,
   getMyBookingById,
   testEmailSystem,
-  stripeWebhook // Import the stripeWebhook controller
+  stripeWebhook, // Import the stripeWebhook controller
+  cleanupDuplicateBookings
 } = require('../Controllers/bookingController');
 router.post('/test-email-system', testEmailSystem);
 
@@ -52,6 +53,7 @@ router.get('/api/bookings/email/:email', getBookingsByEmail); // Public access b
 router.get('/api/admin/bookings', getBookings);
 router.put('/api/admin/bookings/:id', updateBooking);
 router.delete('/api/admin/bookings/:id', deleteBooking);
+router.post('/api/admin/bookings/cleanup-duplicates', cleanupDuplicateBookings);
 
 // Stripe webhook route for payment confirmation
 router.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), stripeWebhook);

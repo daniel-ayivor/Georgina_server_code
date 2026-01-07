@@ -52,11 +52,13 @@ const initiateBookingPayment = async (req, res) => {
         serviceType,
         date: appointmentDate,
         time: appointmentTime,
+        status: 'pending',
         paymentStatus: 'pending',
         createdAt: {
-          [Op.gte]: new Date(Date.now() - 10 * 60 * 1000) // Within last 10 minutes
+          [Op.gte]: new Date(Date.now() - 5 * 60 * 1000) // Within last 5 minutes
         }
-      }
+      },
+      order: [['createdAt', 'DESC']]
     });
 
     if (existingPendingBooking) {
@@ -1234,12 +1236,17 @@ const stripeWebhook = async (req, res) => {
       // Find and update booking
       const booking = await Booking.findOne({ where: { paymentIntentId: sessionId } });
       if (booking) {
-        booking.status = 'confirmed';
-        booking.paymentStatus = 'completed';
-        booking.paidAmount = session.amount_total / 100; // Convert from cents
-        await booking.save();
-        console.log(`✅ Booking ${booking.bookingReference} confirmed after payment.`);
-        console.log(`💰 Payment amount: ${booking.paidAmount}`);
+        // Only update if not already completed
+        if (booking.paymentStatus !== 'completed') {
+          booking.status = 'confirmed';
+          booking.paymentStatus = 'completed';
+          booking.paidAmount = session.amount_total / 100; // Convert from cents
+          await booking.save();
+          console.log(`✅ Booking ${booking.bookingReference} confirmed after payment.`);
+          console.log(`💰 Payment amount: ${booking.paidAmount}`);
+        } else {
+          console.log(`ℹ️ Booking ${booking.bookingReference} already completed.`);
+        }
       } else {
         console.warn(`⚠️ No booking found for session: ${sessionId}`);
       }
@@ -1287,6 +1294,67 @@ const stripeWebhook = async (req, res) => {
   res.status(200).json({ received: true });
 };
 
+// Utility function to clean up duplicate pending bookings
+const cleanupDuplicateBookings = async (req, res) => {
+  try {
+    // Find all pending bookings
+    const pendingBookings = await Booking.findAll({
+      where: {
+        status: 'pending',
+        paymentStatus: 'pending'
+      },
+      order: [['createdAt', 'ASC']]
+    });
+
+    const duplicates = [];
+    const seen = new Map();
+
+    // Group bookings by unique key
+    for (const booking of pendingBookings) {
+      const key = `${booking.userId}-${booking.customerEmail}-${booking.serviceType}-${booking.date}-${booking.time}`;
+      
+      if (seen.has(key)) {
+        // This is a duplicate, keep the older one
+        duplicates.push(booking.id);
+      } else {
+        seen.set(key, booking.id);
+      }
+    }
+
+    if (duplicates.length > 0) {
+      // Delete duplicate bookings
+      await Booking.destroy({
+        where: {
+          id: {
+            [Op.in]: duplicates
+          }
+        }
+      });
+
+      console.log(`🧹 Cleaned up ${duplicates.length} duplicate bookings`);
+      
+      return res.json({
+        success: true,
+        message: `Cleaned up ${duplicates.length} duplicate pending bookings`,
+        deletedCount: duplicates.length
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'No duplicate bookings found',
+      deletedCount: 0
+    });
+  } catch (error) {
+    console.error('Error cleaning up duplicates:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error cleaning up duplicate bookings',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   initiateBookingPayment,
   createBooking,
@@ -1302,5 +1370,6 @@ module.exports = {
   getRecentBookings,
   getMyBookingById,
   testEmailSystem,
-  stripeWebhook
+  stripeWebhook,
+  cleanupDuplicateBookings
 };

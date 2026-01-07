@@ -401,24 +401,320 @@ const getBookings = async (req, res) => {
 
 // Restore missing controller functions
 const getBookingById = async (req, res) => {
-  // Example implementation
-  res.json({ message: 'getBookingById not yet implemented' });
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Booking ID is required'
+      });
+    }
+
+    const booking = await Booking.findByPk(id, {
+      attributes: [
+        'id',
+        'userId',
+        'customerName',
+        'customerEmail',
+        'customerPhone',
+        'serviceType',
+        'selectedFeatures',
+        'address',
+        'date',
+        'time',
+        'duration',
+        'price',
+        'status',
+        'paymentStatus',
+        'paymentIntentId',
+        'paidAmount',
+        'bookingReference',
+        'notes',
+        'specialInstructions',
+        'createdAt',
+        'updatedAt'
+      ]
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      booking
+    });
+  } catch (error) {
+    console.error('Error fetching booking by ID:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching booking', 
+      error: error.message 
+    });
+  }
 };
 
 const getBookingsByEmail = async (req, res) => {
-  res.json({ message: 'getBookingsByEmail not yet implemented' });
+  try {
+    const { email } = req.params;
+    const { page = 1, limit = 10, status } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email address is required'
+      });
+    }
+
+    const where = { customerEmail: email };
+    if (status) where.status = status;
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: bookings } = await Booking.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      offset,
+      limit: parseInt(limit),
+      attributes: [
+        'id',
+        'customerName',
+        'customerEmail',
+        'customerPhone',
+        'serviceType',
+        'selectedFeatures',
+        'address',
+        'date',
+        'time',
+        'duration',
+        'price',
+        'status',
+        'paymentStatus',
+        'paidAmount',
+        'bookingReference',
+        'specialInstructions',
+        'createdAt',
+        'updatedAt'
+      ]
+    });
+
+    res.json({
+      success: true,
+      total: count,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(count / limit),
+      bookings
+    });
+  } catch (error) {
+    console.error('Error fetching bookings by email:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching bookings', 
+      error: error.message 
+    });
+  }
 };
 
 const updateBooking = async (req, res) => {
-  res.json({ message: 'updateBooking not yet implemented' });
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Booking ID is required'
+      });
+    }
+
+    const booking = await Booking.findByPk(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    // Prevent updating completed or cancelled bookings
+    if (booking.status === 'completed' && updateData.status !== 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot modify a completed booking'
+      });
+    }
+
+    // Update only allowed fields
+    const allowedFields = [
+      'customerName',
+      'customerEmail',
+      'customerPhone',
+      'serviceType',
+      'selectedFeatures',
+      'address',
+      'date',
+      'time',
+      'duration',
+      'price',
+      'status',
+      'paymentStatus',
+      'notes',
+      'specialInstructions'
+    ];
+
+    Object.keys(updateData).forEach(key => {
+      if (allowedFields.includes(key)) {
+        booking[key] = updateData[key];
+      }
+    });
+
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: 'Booking updated successfully',
+      booking
+    });
+  } catch (error) {
+    console.error('Error updating booking:', error);
+    
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: error.errors.map(err => ({
+          field: err.path,
+          message: err.message
+        }))
+      });
+    }
+
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating booking', 
+      error: error.message 
+    });
+  }
 };
 
 const cancelBooking = async (req, res) => {
-  res.json({ message: 'cancelBooking not yet implemented' });
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Booking ID is required'
+      });
+    }
+
+    const booking = await Booking.findByPk(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    // Check if booking can be cancelled
+    if (booking.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot cancel a completed booking'
+      });
+    }
+
+    if (booking.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Booking is already cancelled'
+      });
+    }
+
+    // Update booking status to cancelled
+    booking.status = 'cancelled';
+    if (reason) {
+      booking.notes = booking.notes 
+        ? `${booking.notes}\n[CANCELLATION] ${reason}` 
+        : `[CANCELLATION] ${reason}`;
+    }
+
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: 'Booking cancelled successfully',
+      booking: {
+        id: booking.id,
+        bookingReference: booking.bookingReference,
+        status: booking.status,
+        customerName: booking.customerName,
+        serviceType: booking.serviceType,
+        date: booking.date,
+        time: booking.time
+      }
+    });
+  } catch (error) {
+    console.error('Error cancelling booking:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error cancelling booking', 
+      error: error.message 
+    });
+  }
 };
 
 const deleteBooking = async (req, res) => {
-  res.json({ message: 'deleteBooking not yet implemented' });
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Booking ID is required'
+      });
+    }
+
+    const booking = await Booking.findByPk(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    // Prevent deletion of completed bookings (for record keeping)
+    if (booking.status === 'completed' || booking.paymentStatus === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete a completed or paid booking. Consider cancelling instead.'
+      });
+    }
+
+    const bookingReference = booking.bookingReference;
+    await booking.destroy();
+
+    res.json({
+      success: true,
+      message: 'Booking deleted successfully',
+      bookingReference
+    });
+  } catch (error) {
+    console.error('Error deleting booking:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting booking', 
+      error: error.message 
+    });
+  }
 };
 
 const getAvailableTimeSlots = async (req, res) => {

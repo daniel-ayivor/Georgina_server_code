@@ -28,7 +28,7 @@ const Product = sequelize.define('Product', {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      isIn: [['Clothes', 'Foodstuffs', 'Services']]
+      isIn: [['Clothes', 'Foodstuffs']]
     },
   },
   categoryLevel2: {
@@ -36,14 +36,6 @@ const Product = sequelize.define('Product', {
     allowNull: true,
   },
   categoryLevel3: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  serviceType: {
-    type: DataTypes.ENUM('physical', 'service'),
-    defaultValue: 'physical',
-  },
-  serviceDuration: {
     type: DataTypes.STRING,
     allowNull: true,
   },

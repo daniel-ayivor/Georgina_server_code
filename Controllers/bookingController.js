@@ -40,6 +40,39 @@ const initiateBookingPayment = async (req, res) => {
       });
     }
 
+    // Check if there's already a pending booking for this user with similar details
+    const serviceType = services?.[0]?.serviceName || 'Cleaning Service';
+    const appointmentDate = appointment?.date || new Date().toISOString().split('T')[0];
+    const appointmentTime = appointment?.time || '09:00';
+    
+    const existingPendingBooking = await Booking.findOne({
+      where: {
+        userId,
+        customerEmail: customerInfo.customerEmail,
+        serviceType,
+        date: appointmentDate,
+        time: appointmentTime,
+        paymentStatus: 'pending',
+        createdAt: {
+          [Op.gte]: new Date(Date.now() - 10 * 60 * 1000) // Within last 10 minutes
+        }
+      }
+    });
+
+    if (existingPendingBooking) {
+      console.log('⚠️ Reusing existing pending booking:', existingPendingBooking.bookingReference);
+      
+      // Return existing payment intent info
+      const existingPaymentIntent = await stripe.paymentIntents.retrieve(existingPendingBooking.paymentIntentId);
+      
+      return res.json({
+        success: true,
+        clientSecret: existingPaymentIntent.client_secret,
+        paymentIntentId: existingPaymentIntent.id,
+        bookingReference: existingPendingBooking.bookingReference
+      });
+    }
+
     // Create PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount),
@@ -61,7 +94,6 @@ const initiateBookingPayment = async (req, res) => {
     });
 
     // Create a pending booking record with payment intent ID
-    const serviceType = services?.[0]?.serviceName || 'Cleaning Service';
     const selectedFeatures = services?.map(s => s.serviceName) || [];
     
     const pendingBooking = await Booking.create({

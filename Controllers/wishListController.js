@@ -56,6 +56,15 @@ const getWishlist = async (req, res) => {
       where: { userId }
     });
 
+    // If no wishlist items, return empty array
+    if (!wishlistItems || wishlistItems.length === 0) {
+      return res.status(200).json({ 
+        products: [],
+        count: 0,
+        message: 'Wishlist is empty'
+      });
+    }
+
     // Get product details
     const productIds = wishlistItems.map(item => item.productId);
     const products = await Product.findAll({
@@ -78,7 +87,7 @@ const getWishlist = async (req, res) => {
     res.status(200).json({ 
       products: wishlistProducts,
       count: wishlistProducts.length,
-      message: 'Wishlist retrieved'
+      message: wishlistProducts.length > 0 ? 'Wishlist retrieved' : 'Wishlist is empty'
     });
   } catch (error) {
     console.error('Error getting wishlist:', error);

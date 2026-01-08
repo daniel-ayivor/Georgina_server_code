@@ -24,6 +24,24 @@ const Product = sequelize.define('Product', {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
+  discount: {
+    type: DataTypes.DECIMAL(5, 2),
+    allowNull: true,
+    defaultValue: 0,
+    validate: {
+      min: 0,
+      max: 100
+    },
+    comment: 'Discount percentage (0-100)'
+  },
+  discountedPrice: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      const price = parseFloat(this.getDataValue('price'));
+      const discount = parseFloat(this.getDataValue('discount')) || 0;
+      return price - (price * discount / 100);
+    }
+  },
   categoryLevel1: {
     type: DataTypes.STRING,
     allowNull: false,

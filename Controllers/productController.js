@@ -91,6 +91,7 @@ const product = await Product.create({
     slug,
     description: description || null,
     price: parseFloat(price),
+    discount: req.body.discount ? parseFloat(req.body.discount) : 0,
     categoryLevel1,
     categoryLevel2: categoryLevel2 || null,
     categoryLevel3: categoryLevel3 || null,
@@ -199,6 +200,7 @@ const updateProduct = async (req, res) => {
 
     // Convert data types
     if (req.body.price) req.body.price = parseFloat(req.body.price);
+    if (req.body.discount !== undefined) req.body.discount = parseFloat(req.body.discount);
     if (req.body.stock) req.body.stock = parseInt(req.body.stock);
     if (req.body.tags) {
       req.body.tags = typeof req.body.tags === 'string' ? 

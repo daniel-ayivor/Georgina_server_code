@@ -11,7 +11,7 @@ const {
     PaymentIntent
 } = require("../Controllers/paymentController");
 
-// Embedded checkout route (replaces old /api/payment)
+
 router.post("/api/payment", PaymentIntent);
 router.post("/api/payment/checkout", createEmbeddedCheckout);
 

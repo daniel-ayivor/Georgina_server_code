@@ -15,7 +15,7 @@ const {
 router.post("/api/payment", PaymentIntent);
 router.post("/api/payment/checkout", createEmbeddedCheckout);
 
-// Other routes
+
 router.get("/api/session-status", getSessionStatus);
 router.post("/api/confirm-payment", confirmPayment);
 

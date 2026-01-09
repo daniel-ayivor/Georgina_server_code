@@ -15,14 +15,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Reusable mail transporter builder with SMTP override + Gmail fallback
 const buildMailTransporter = () => {
-  // Check if SMTP configuration exists
   if (process.env.SMTP_HOST) {
-    console.log('📧 Using SMTP configuration:', {
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      secure: process.env.SMTP_SECURE,
-      user: process.env.SMTP_USER ? '***configured***' : 'NOT SET'
-    });
     return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || "587", 10),
@@ -35,15 +28,6 @@ const buildMailTransporter = () => {
   }
 
   // Fallback to Gmail (requires EMAIL_USER + EMAIL_PASS app password)
-  console.log('📧 Using Gmail fallback configuration');
-  console.log('📧 EMAIL_USER:', process.env.EMAIL_USER ? '***configured***' : 'NOT SET');
-  console.log('📧 EMAIL_PASS:', process.env.EMAIL_PASS ? '***configured***' : 'NOT SET');
-  
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.error('❌ Email credentials not configured! Set EMAIL_USER and EMAIL_PASS in .env');
-    throw new Error('Email credentials not configured. Please set EMAIL_USER and EMAIL_PASS environment variables.');
-  }
-  
   return nodemailer.createTransport({
     service: "Gmail",
     auth: {
@@ -416,76 +400,23 @@ const forgotPassword = async (req, res) => {
 );
 
     // Send Reset Email
-    try {
-      const transporter = buildMailTransporter();
-      
-      // Verify transporter configuration
-      console.log('📧 Verifying email transporter...');
-      await transporter.verify();
-      console.log('✅ Email transporter verified successfully');
+    const transporter = buildMailTransporter();
+    // Optional: fail fast if transporter misconfigured
+    await transporter.verify();
 
-      const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
-      const resetLink = `${clientUrl}/reset-password?token=${resetToken}`;
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+    const resetLink = `${clientUrl}/reset-password?token=${resetToken}`;
 
-      const mailOptions = {
-        from: process.env.EMAIL_USER || process.env.SMTP_USER,
-        to: email,
-        subject: "Password Reset Request",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Password Reset Request</h2>
-            <p>You requested to reset your password. Click the button below to proceed:</p>
-            <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0;">Reset Password</a>
-            <p>Or copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #666;">${resetLink}</p>
-            <p><strong>This link will expire in 12 hours.</strong></p>
-            <p>If you didn't request this, please ignore this email.</p>
-            <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
-            <p style="color: #999; font-size: 12px;">This is an automated email, please do not reply.</p>
-          </div>
-        `,
-      };
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Password Reset Request",
+      html: `<p>Click <a href="${resetLink}">here</a> to reset your password. This link will expire in 15 minutes.</p>`,
+    };
 
-      console.log('📧 Sending password reset email to:', email);
-      await transporter.sendMail(mailOptions);
-      console.log('✅ Password reset email sent successfully');
+    await transporter.sendMail(mailOptions);
 
-      res.json({ 
-        success: true,
-        message: "Password reset email sent. Please check your inbox." 
-      });
-    } catch (emailError) {
-      console.error("❌ Error sending email:", emailError);
-      console.error("Email error details:", {
-        code: emailError.code,
-        command: emailError.command,
-        response: emailError.response,
-        responseCode: emailError.responseCode
-      });
-      
-      // Return specific error messages
-      if (emailError.code === 'EAUTH') {
-        return res.status(500).json({ 
-          success: false,
-          message: "Email authentication failed. Please contact support.",
-          error: "Invalid email credentials configured on server"
-        });
-      }
-      
-      if (emailError.code === 'ECONNECTION' || emailError.code === 'ETIMEDOUT') {
-        return res.status(500).json({ 
-          success: false,
-          message: "Unable to connect to email server. Please try again later.",
-          error: "Email server connection failed"
-        });
-      }
-      
-      return res.status(500).json({ 
-        success: false,
-        message: "Failed to send password reset email. Please try again later.",
-        error: emailError.message
-      });
-    }
+    res.json({ message: "Password reset email sent. Please check your inbox." });
   } catch (error) {
     console.error("Error in forgot password", error);
     res.status(500).json({ message: "Server error" });
@@ -696,33 +627,29 @@ const adminChangePassword = async (req, res) => {
 
     // Optionally, send email notification to the user
     try {
-      const transporter = buildMailTransporter();
-      await transporter.verify();
+      const transporter = nodemailer.createTransport({
+        service: "Gmail",
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
 
       const mailOptions = {
-        from: process.env.EMAIL_USER || process.env.SMTP_USER,
+        from: process.env.EMAIL_USER,
         to: userToUpdate.email,
         subject: "Your Password Has Been Updated",
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Password Updated</h2>
-            <p>Hello ${userToUpdate.name},</p>
-            <p>Your password has been updated by an administrator.</p>
-            <p><strong>Updated by:</strong> ${requester.name} (${requester.email})</p>
-            <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
-            <p style="color: #d9534f; margin-top: 20px;">⚠️ If you did not request this change, please contact our support team immediately.</p>
-            <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
-            <p>Best regards,<br>The Admin Team</p>
-          </div>
+          <p>Hello ${userToUpdate.name},</p>
+          <p>Your password has been updated by an administrator.</p>
+          <p>If you did not request this change, please contact our support team immediately.</p>
+          <p>Best regards,<br>The Admin Team</p>
         `,
       };
 
-      console.log('📧 Sending password update notification to:', userToUpdate.email);
       await transporter.sendMail(mailOptions);
-      console.log('✅ Password update notification sent successfully');
     } catch (emailError) {
-      console.error("❌ Error sending notification email:", emailError);
-      console.error("Email error code:", emailError.code);
+      console.error("Error sending notification email:", emailError);
       // Don't fail the request if email fails
     }
 

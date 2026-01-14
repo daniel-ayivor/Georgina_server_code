@@ -2,12 +2,12 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.addColumn('products', 'weight', {
-      type: Sequelize.DECIMAL(10, 2),
-      allowNull: true,
-      defaultValue: null,
-      comment: 'Weight of product in kg',
-    });
+// migration file
+await queryInterface.addColumn('products', 'weight', {
+  type: Sequelize.STRING,
+  allowNull: true,
+});
+
   },
 
   down: async (queryInterface, Sequelize) => {

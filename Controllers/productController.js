@@ -90,6 +90,8 @@ const product = await Product.create({
     name,
     slug,
     description: description || null,
+    weight: req.body.weight || null,
+
     price: parseFloat(price),
     discount: req.body.discount ? parseFloat(req.body.discount) : 0,
     categoryLevel1,

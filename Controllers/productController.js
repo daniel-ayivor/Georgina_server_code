@@ -23,115 +23,183 @@ const generateSlug = (name) => {
 };
 
 // Controllers/productController.js
+// const createProducts = async (req, res) => {
+//   try {
+//     const {
+//       isFeatured,
+//       isTrending,
+//       isNewArrival,
+//       featuredOrder,
+//       trendingOrder,
+//       newArrivalOrder,
+//       name,
+//       description,
+//       price,
+//       categoryLevel1,
+//       categoryLevel2,
+//       categoryLevel3,
+//       wishList,
+//       size,
+//       unit,
+//       stock,
+//       tags,
+//       brand,
+//       isActive
+//     } = req.body;
+
+//     // Validation
+//     if (!name || !price || !categoryLevel1) {
+//       return res.status(400).json({ 
+//         message: 'Name, price, and categoryLevel1 are required' 
+//       });
+//     }
+
+//     const file = req.file;
+//     if (!file) {
+//       return res.status(400).json({ message: 'Image is required' });
+//     }
+
+//     // Cloudinary provides the file URL in file.path
+//     const imageUrl = file.path;
+    
+//     // Generate slug from name
+//     const slug = generateSlug(name);
+    
+//     // Check if slug already exists
+//     const existingProduct = await Product.findOne({ where: { slug } });
+//     if (existingProduct) {
+//       // If product exists, delete the uploaded image from Cloudinary
+//       try {
+//         const publicId = extractPublicIdFromUrl(imageUrl);
+//         await cloudinary.uploader.destroy(publicId);
+//       } catch (deleteError) {
+//         console.error('Error deleting image from Cloudinary:', deleteError);
+//       }
+//       return res.status(400).json({ 
+//         message: 'Product with similar name already exists' 
+//       });
+//     }
+
+//     // Handle tags
+//     let tagsArray = [];
+//     if (tags) {
+//       tagsArray = typeof tags === 'string' ? JSON.parse(tags) : tags;
+//     }
+
+// let sizeArray = [];
+// if (req.body.size) {
+//   sizeArray = req.body.size.split(',').map(s => s.trim()).filter(Boolean);
+// }
+// // Then save size: sizeArray
+
+// const product = await Product.create({
+//     name,
+//     slug,
+//     description: description || null,
+//     weight: req.body.weight || null,
+
+//     price: parseFloat(price),
+//     discount: req.body.discount ? parseFloat(req.body.discount) : 0,
+//     categoryLevel1,
+//     categoryLevel2: categoryLevel2 || null,
+//     categoryLevel3: categoryLevel3 || null,
+//     unit: unit || 'piece',
+//     stock: stock ? parseInt(stock) : 0,
+//     images: [imageUrl],
+//     isActive: isActive !== undefined ? isActive === 'true' || isActive === true : true,
+//     isFeatured: isFeatured === 'true' || isFeatured === true,
+//     isTrending: isTrending === 'true' || isTrending === true,
+//     isNewArrival: isNewArrival === 'true' || isNewArrival === true,
+//     featuredOrder: featuredOrder ? parseInt(featuredOrder) : 0,
+//     trendingOrder: trendingOrder ? parseInt(trendingOrder) : 0,
+//     newArrivalOrder: newArrivalOrder ? parseInt(newArrivalOrder) : 0,
+//     wishList: wishList === 'true' || wishList === true,
+//     size: sizeArray || null,
+//     tags: tags ? (typeof tags === 'string' ? JSON.parse(tags) : tags) : [],
+//     brand: brand || null
+// });
+
+
+//     res.status(201).json({ 
+//       message: 'Product created successfully', 
+//       product 
+//     });
+//   } catch (error) {
+//     // If error occurs, delete the uploaded image from Cloudinary
+//     if (req.file && req.file.path) {
+//       try {
+//         const publicId = extractPublicIdFromUrl(req.file.path);
+//         await cloudinary.uploader.destroy(publicId);
+//       } catch (deleteError) {
+//         console.error('Error deleting image from Cloudinary:', deleteError);
+//       }
+//     }
+//     console.error('Error creating product:', error);
+//     res.status(500).json({ 
+//       message: 'Error creating product', 
+//       error: error.message 
+//     });
+//   }
+// };
 const createProducts = async (req, res) => {
   try {
     const {
-      isFeatured,
-      isTrending,
-      isNewArrival,
-      featuredOrder,
-      trendingOrder,
-      newArrivalOrder,
+      name, description, price, categoryLevel1, categoryLevel2, categoryLevel3,
+      unit, stock, brand, isActive, isFeatured, isTrending, isNewArrival,
+      featuredOrder, trendingOrder, newArrivalOrder, weight, discount, tags, size
+    } = req.body;
+
+    // 1. Safe JSON Parsing for Tags and Size
+    // FormData sends arrays as strings, we must parse them or default to empty arrays
+    let tagsArray = [];
+    try {
+      tagsArray = typeof tags === 'string' ? JSON.parse(tags) : (tags || []);
+    } catch (e) { tagsArray = []; }
+
+    let sizeArray = [];
+    try {
+      // If frontend sends "S,M,L", split it. If it sends "['S','M']", parse it.
+      sizeArray = typeof size === 'string' ? size.split(',').map(s => s.trim()) : (size || []);
+    } catch (e) { sizeArray = []; }
+
+    // 2. File check
+    const imageUrl = req.file ? req.file.path : null;
+    if (!imageUrl) return res.status(400).json({ message: 'Image is required' });
+
+    const slug = generateSlug(name);
+
+    // 3. Create Product (Matching your Model fields exactly)
+    const product = await Product.create({
       name,
+      slug,
       description,
-      price,
+      price: parseFloat(price),
+      discount: discount ? parseFloat(discount) : 0, // Model uses this as %
       categoryLevel1,
       categoryLevel2,
       categoryLevel3,
-      wishList,
-      size,
-      unit,
-      stock,
-      tags,
-      brand,
-      isActive
-    } = req.body;
-
-    // Validation
-    if (!name || !price || !categoryLevel1) {
-      return res.status(400).json({ 
-        message: 'Name, price, and categoryLevel1 are required' 
-      });
-    }
-
-    const file = req.file;
-    if (!file) {
-      return res.status(400).json({ message: 'Image is required' });
-    }
-
-    // Cloudinary provides the file URL in file.path
-    const imageUrl = file.path;
-    
-    // Generate slug from name
-    const slug = generateSlug(name);
-    
-    // Check if slug already exists
-    const existingProduct = await Product.findOne({ where: { slug } });
-    if (existingProduct) {
-      // If product exists, delete the uploaded image from Cloudinary
-      try {
-        const publicId = extractPublicIdFromUrl(imageUrl);
-        await cloudinary.uploader.destroy(publicId);
-      } catch (deleteError) {
-        console.error('Error deleting image from Cloudinary:', deleteError);
-      }
-      return res.status(400).json({ 
-        message: 'Product with similar name already exists' 
-      });
-    }
-
-    // Handle tags
-    let tagsArray = [];
-    if (tags) {
-      tagsArray = typeof tags === 'string' ? JSON.parse(tags) : tags;
-    }
-
-const product = await Product.create({
-    name,
-    slug,
-    description: description || null,
-    weight: req.body.weight || null,
-
-    price: parseFloat(price),
-    discount: req.body.discount ? parseFloat(req.body.discount) : 0,
-    categoryLevel1,
-    categoryLevel2: categoryLevel2 || null,
-    categoryLevel3: categoryLevel3 || null,
-    unit: unit || 'piece',
-    stock: stock ? parseInt(stock) : 0,
-    images: [imageUrl],
-    isActive: isActive !== undefined ? isActive === 'true' || isActive === true : true,
-    isFeatured: isFeatured === 'true' || isFeatured === true,
-    isTrending: isTrending === 'true' || isTrending === true,
-    isNewArrival: isNewArrival === 'true' || isNewArrival === true,
-    featuredOrder: featuredOrder ? parseInt(featuredOrder) : 0,
-    trendingOrder: trendingOrder ? parseInt(trendingOrder) : 0,
-    newArrivalOrder: newArrivalOrder ? parseInt(newArrivalOrder) : 0,
-    wishList: wishList === 'true' || wishList === true,
-    size: size || null,
-    tags: tags ? (typeof tags === 'string' ? JSON.parse(tags) : tags) : [],
-    brand: brand || null
-});
-
-
-    res.status(201).json({ 
-      message: 'Product created successfully', 
-      product 
+      unit: unit || 'piece',
+      stock: parseInt(stock) || 0,
+      weight,
+      images: [imageUrl], // Model expects JSON array
+      isActive: isActive === 'true' || isActive === true,
+      isFeatured: isFeatured === 'true' || isFeatured === true,
+      isTrending: isTrending === 'true' || isTrending === true,
+      isNewArrival: isNewArrival === 'true' || isNewArrival === true,
+      featuredOrder: parseInt(featuredOrder) || 0,
+      trendingOrder: parseInt(trendingOrder) || 0,
+      newArrivalOrder: parseInt(newArrivalOrder) || 0,
+      tags: tagsArray, // Model expects JSON
+      size: sizeArray, // Model expects JSON
+      brand
     });
+
+    res.status(201).json({ message: 'Product created successfully', product });
   } catch (error) {
-    // If error occurs, delete the uploaded image from Cloudinary
-    if (req.file && req.file.path) {
-      try {
-        const publicId = extractPublicIdFromUrl(req.file.path);
-        await cloudinary.uploader.destroy(publicId);
-      } catch (deleteError) {
-        console.error('Error deleting image from Cloudinary:', deleteError);
-      }
-    }
-    console.error('Error creating product:', error);
+    console.error('SERVER ERROR:', error);
     res.status(500).json({ 
       message: 'Error creating product', 
-      error: error.message 
+      error: error.errors ? error.errors.map(e => e.message) : error.message 
     });
   }
 };
@@ -212,6 +280,12 @@ const updateProduct = async (req, res) => {
       req.body.isActive = req.body.isActive === 'true';
     }
 
+    let sizeArray = [];
+if (req.body.size) {
+  sizeArray = req.body.size.split(',').map(s => s.trim()).filter(Boolean);
+}
+// Then save size: sizeArray
+
     await product.update(req.body);
     
     res.status(200).json({ 
@@ -236,71 +310,7 @@ const updateProduct = async (req, res) => {
   }
 };
 
-// Helper function to extract public_id from Cloudinary URL
 
-// Get All Products with advanced filtering
-// const getProducts = async (req, res) => {
-//     try {
-//         const { 
-//             categoryLevel1, 
-//             categoryLevel2, 
-//             categoryLevel3, 
-//             serviceType, 
-//             isActive,
-//             search,
-//             minPrice,
-//             maxPrice,
-//             brand
-//         } = req.query;
-        
-//         let whereClause = {};
-        
-//         // Category filtering
-//         if (categoryLevel1) whereClause.categoryLevel1 = categoryLevel1;
-//         if (categoryLevel2) whereClause.categoryLevel2 = categoryLevel2;
-//         if (categoryLevel3) whereClause.categoryLevel3 = categoryLevel3;
-//         if (serviceType) whereClause.serviceType = serviceType;
-//         if (brand) whereClause.brand = brand;
-        
-//         // Active status filtering
-//         if (isActive !== undefined) {
-//             whereClause.isActive = isActive === 'true';
-//         }
-        
-//         // Price range filtering
-//         if (minPrice || maxPrice) {
-//             whereClause.price = {};
-//             if (minPrice) whereClause.price[Op.gte] = parseFloat(minPrice);
-//             if (maxPrice) whereClause.price[Op.lte] = parseFloat(maxPrice);
-//         }
-        
-//         // Search functionality
-//         if (search) {
-//             whereClause[Op.or] = [
-//                 { name: { [Op.like]: `%${search}%` } },
-//                 { description: { [Op.like]: `%${search}%` } },
-//                 { brand: { [Op.like]: `%${search}%` } }
-//             ];
-//         }
-
-//         const products = await Product.findAll({ 
-//             where: whereClause,
-//             order: [['createdAt', 'DESC']]
-//         });
-        
-//         res.status(200).json({ 
-//             products, 
-//             message: "Products retrieved successfully" 
-//         });
-//     } catch (error) {
-//         console.error("Error retrieving products:", error);
-//         res.status(500).json({ 
-//             error: "Error retrieving products",
-//             message: error.message 
-//         });
-//     }
-// };
-// Get All Products with advanced filtering - EXACT MATCH VERSION
 const getProducts = async (req, res) => {
     try {
         const { 

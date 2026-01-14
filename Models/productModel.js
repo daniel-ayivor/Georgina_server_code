@@ -126,7 +126,7 @@ totalReviews: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
-  sizes: {
+  size: {
     type: DataTypes.JSON,
     allowNull: true,
     defaultValue: [],

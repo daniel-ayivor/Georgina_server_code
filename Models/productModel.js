@@ -126,9 +126,10 @@ totalReviews: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
-  size: {
-    type: DataTypes.STRING,
+  sizes: {
+    type: DataTypes.JSON,
     allowNull: true,
+    defaultValue: [],
   }
 }, {
   tableName: 'products',

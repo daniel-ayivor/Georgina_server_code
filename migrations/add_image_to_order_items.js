@@ -5,7 +5,7 @@ module.exports = {
     await queryInterface.addColumn('order_items', 'image', {
       type: Sequelize.TEXT,
       allowNull: true,
-      after: 'productName' // Add after productName column
+      after: 'productName'
     });
   },
 

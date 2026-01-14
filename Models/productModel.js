@@ -72,6 +72,12 @@ const Product = sequelize.define('Product', {
     allowNull: true,
     defaultValue: [],
   },
+  weight: {
+  type: DataTypes.DECIMAL(10, 2),
+  allowNull: true,
+  comment: 'Weight of product in kg',
+},
+
   // Add these fields to your Product model
 averageRating: {
   type: DataTypes.DECIMAL(2, 1),
